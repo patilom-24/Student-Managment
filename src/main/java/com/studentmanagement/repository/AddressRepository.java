@@ -30,6 +30,8 @@ public interface AddressRepository extends JpaRepository<Address, Long>, JpaSpec
 
     List<Address> findByStateOrderByCityAsc(String state);
 
+
+
     // ── Derived: count & exists ─────────────────────────────────────────────
     long countByCountry(String country);
 

@@ -1,5 +1,6 @@
 package com.studentmanagement.repository;
 
+import com.studentmanagement.model.Address;
 import com.studentmanagement.model.Student;
 import com.studentmanagement.model.enums.Gender;
 import com.studentmanagement.model.enums.StudentStatus;
@@ -62,6 +63,8 @@ public interface StudentRepository extends JpaRepository<Student, Long>, JpaSpec
     List<Student> findByStatusOrderByLastNameAscFirstNameAsc(StudentStatus status);
 
     List<Student> findByDepartment_CodeOrderByEnrollmentDateDesc(String departmentCode);
+
+
 
     // ── Derived: count & exists ─────────────────────────────────────────────
     long countByStatus(StudentStatus status);
