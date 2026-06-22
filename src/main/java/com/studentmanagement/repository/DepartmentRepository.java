@@ -41,7 +41,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long>, J
     Page<Department> findByNameContaining(String namePart, Pageable pageable);
 
     // ── JPQL ──────────────────────────────────────────────────────────────────
-    @Query("SELECT d FROM Department d WHERE d.description IS NOT NULL AND d.description <> ''")
+        @Query("SELECT d FROM Department d WHERE d.description IS NOT NULL AND d.description <> ''")
     List<Department> findAllWithDescription();
 
     @Query("SELECT d FROM Department d WHERE LOWER(d.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

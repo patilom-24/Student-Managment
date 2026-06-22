@@ -1,8 +1,8 @@
 package com.studentmanagement.exception;
 
-public class DuplicateResourceException extends RuntimeException {
+public class DuplicateResourceException extends ServiceException {
 
     public DuplicateResourceException(String message) {
-        super(message);
+        super(ErrorCode.DUPLICATE_RESOURCE, message);
     }
 }

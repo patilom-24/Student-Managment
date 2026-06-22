@@ -1,8 +1,8 @@
 package com.studentmanagement.exception;
 
-public class ResourceNotFoundException extends RuntimeException {
+public class ResourceNotFoundException extends ServiceException {
 
     public ResourceNotFoundException(String message) {
-        super(message);
+        super(ErrorCode.RESOURCE_NOT_FOUND, message);
     }
 }

@@ -2,17 +2,90 @@ package com.studentmanagement.service;
 
 import com.studentmanagement.dto.request.FeeCreateRequest;
 import com.studentmanagement.dto.request.FeePaymentRequest;
+import com.studentmanagement.exception.BusinessValidationException;
+import com.studentmanagement.exception.ResourceNotFoundException;
 import com.studentmanagement.model.Fee;
+import com.studentmanagement.model.Student;
+import com.studentmanagement.model.enums.FeeStatus;
+import com.studentmanagement.repository.FeeRepository;
+import com.studentmanagement.repository.StudentRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
-public interface FeesService {
+@Service
+@Transactional(readOnly = true)
+public class FeesService {
 
-    Fee createFeeRecord(FeeCreateRequest request);
+    private final FeeRepository feeRepository;
+    private final StudentRepository studentRepository;
 
-    Fee payFees(FeePaymentRequest request);
+    public FeesService(FeeRepository feeRepository, StudentRepository studentRepository) {
+        this.feeRepository = feeRepository;
+        this.studentRepository = studentRepository;
+    }
 
-    List<Fee> getFeesByStudent(String studentId);
+    @Transactional
+    public Fee createFeeRecord(FeeCreateRequest request) {
+        Student student = studentRepository.findByStudentId(request.getStudentId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found with ID: " + request.getStudentId()));
 
-    List<Fee> getPendingFeesByStudent(String studentId);
+        Fee fee = Fee.builder()
+                .student(student)
+                .feeType(request.getFeeType())
+                .amount(request.getAmount())
+                .paidAmount(BigDecimal.ZERO)
+                .status(FeeStatus.PENDING)
+                .dueDate(request.getDueDate())
+                .academicYear(request.getAcademicYear())
+                .semester(request.getSemester())
+                .build();
+
+        return feeRepository.save(fee);
+    }
+
+    @Transactional
+    public Fee payFees(FeePaymentRequest request) {
+        Fee fee = feeRepository.findById(request.getFeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Fee record not found with id: " + request.getFeeId()));
+
+        if (fee.getStatus() == FeeStatus.PAID) {
+            throw new BusinessValidationException("Fee is already fully paid");
+        }
+
+        BigDecimal newPaidAmount = fee.getPaidAmount().add(request.getPaymentAmount());
+
+        if (newPaidAmount.compareTo(fee.getAmount()) > 0) {
+            throw new BusinessValidationException("Payment amount exceeds outstanding fee balance");
+        }
+
+        fee.setPaidAmount(newPaidAmount);
+
+        if (newPaidAmount.compareTo(fee.getAmount()) == 0) {
+            fee.setStatus(FeeStatus.PAID);
+            fee.setPaidDate(LocalDate.now());
+        } else {
+            fee.setStatus(FeeStatus.PARTIAL);
+        }
+
+        return feeRepository.save(fee);
+    }
+
+    public List<Fee> getFeesByStudent(String studentId) {
+        Student student = studentRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found with ID: " + studentId));
+        return feeRepository.findByStudent_Id(student.getId());
+    }
+
+    public List<Fee> getPendingFeesByStudent(String studentId) {
+        Student student = studentRepository.findByStudentId(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Student not found with ID: " + studentId));
+        return feeRepository.findByStudent_IdAndStatus(student.getId(), FeeStatus.PENDING);
+    }
 }
