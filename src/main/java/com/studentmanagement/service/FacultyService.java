@@ -3,6 +3,7 @@ package com.studentmanagement.service;
 import com.studentmanagement.dto.request.FacultyRegistrationRequest;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
+import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Department;
 import com.studentmanagement.model.Instructor;
 import com.studentmanagement.repository.DepartmentRepository;
@@ -27,7 +28,7 @@ public class FacultyService {
         this.departmentRepository = departmentRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Instructor registerFaculty(FacultyRegistrationRequest request) {
         if (instructorRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Faculty email already registered: " + request.getEmail());
@@ -53,7 +54,7 @@ public class FacultyService {
         return instructorRepository.save(instructor);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Instructor updateFaculty(Long id, FacultyRegistrationRequest request) {
         Instructor instructor = getInstructorById(id);
 
@@ -86,7 +87,7 @@ public class FacultyService {
         return instructorRepository.save(instructor);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public void deleteFacultyById(Long id) {
         if (!instructorRepository.existsById(id)) {
             throw new ResourceNotFoundException("Faculty not found with id: " + id);

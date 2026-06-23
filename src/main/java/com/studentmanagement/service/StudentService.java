@@ -6,6 +6,7 @@ import com.studentmanagement.dto.response.StudentResponse;
 import com.studentmanagement.exception.BusinessValidationException;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
+import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Course;
 import com.studentmanagement.model.Department;
 import com.studentmanagement.model.Enrollment;
@@ -46,7 +47,7 @@ public class StudentService {
         this.enrollmentRepository = enrollmentRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public StudentResponse registerStudent(StudentRegistrationRequest request) {
         validateEmailUnique(request.getEmail());
         validateMobileUnique(request.getPhone());
@@ -73,10 +74,6 @@ public class StudentService {
 
         Student savedStudent = studentRepository.save(student);
 
-        if (enrollmentRepository.existsByStudent_IdAndCourse_IdAndSemesterAndAcademicYear(savedStudent.getId(), course.getId(), request.getSemester(), request.getAcademicYear())) {
-            throw new DuplicateResourceException("Student is already enrolled in this course for the given term");
-        }
-
         Enrollment enrollment = Enrollment.builder()
                 .student(savedStudent)
                 .course(course)
@@ -90,7 +87,7 @@ public class StudentService {
         return toResponse(savedStudent);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public StudentResponse updateStudent(Long id, StudentUpdateRequest request) {
         Student student = getStudentEntityById(id);
 
@@ -128,7 +125,7 @@ public class StudentService {
         return toResponse(studentRepository.save(student));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public void deleteStudentById(Long id) {
         if (!studentRepository.existsById(id)) {
             throw new ResourceNotFoundException("Student not found with id: " + id);

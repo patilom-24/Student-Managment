@@ -3,6 +3,7 @@ package com.studentmanagement.service;
 import com.studentmanagement.dto.request.CourseCreateRequest;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
+import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Course;
 import com.studentmanagement.model.Department;
 import com.studentmanagement.model.Instructor;
@@ -32,7 +33,7 @@ public class CourseService {
         this.instructorRepository = instructorRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Course createCourse(CourseCreateRequest request) {
         if (courseRepository.existsByCourseCode(request.getCourseCode())) {
             throw new DuplicateResourceException("Course code already exists: " + request.getCourseCode());
@@ -61,7 +62,7 @@ public class CourseService {
         return courseRepository.save(courseBuilder.build());
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Course updateCourse(Long id, CourseCreateRequest request) {
         Course course = getCourseById(id);
 
@@ -105,7 +106,7 @@ public class CourseService {
         return courseRepository.save(course);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public void deleteCourseById(Long id) {
         if (!courseRepository.existsById(id)) {
             throw new ResourceNotFoundException("Course not found with id: " + id);
@@ -126,7 +127,7 @@ public class CourseService {
         return courseRepository.findByCourseNameContainingIgnoreCase(keyword);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Course assignInstructorToCourse(String courseCode, String instructorEmployeeId) {
         Course course = findCourseByCode(courseCode);
         Instructor instructor = instructorRepository.findByEmployeeId(instructorEmployeeId)

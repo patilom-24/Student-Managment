@@ -8,10 +8,13 @@ import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
 import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Department;
+import com.studentmanagement.model.Student;
 import com.studentmanagement.model.enums.Gender;
 import com.studentmanagement.repository.DepartmentRepository;
+import com.studentmanagement.repository.StudentRepository;
 import com.studentmanagement.service.CourseService;
 import com.studentmanagement.service.StudentService;
+import com.studentmanagement.service.TransactionService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 
@@ -25,15 +28,21 @@ public class TestRepo {
 
     private final StudentService studentService;
     private final CourseService courseService;
+    private final TransactionService transactionService;
     private final DepartmentRepository departmentRepository;
+    private final StudentRepository studentRepository;
 
     public TestRepo(
             StudentService studentService,
             CourseService courseService,
-            DepartmentRepository departmentRepository) {
+            TransactionService transactionService,
+            DepartmentRepository departmentRepository,
+            StudentRepository studentRepository) {
         this.studentService = studentService;
         this.courseService = courseService;
+        this.transactionService = transactionService;
         this.departmentRepository = departmentRepository;
+        this.studentRepository = studentRepository;
     }
 
     @PostConstruct
@@ -41,6 +50,99 @@ public class TestRepo {
         seedDepartmentAndCourse();
         testRegisterStudent();
         testServiceLayerExceptions();
+        testTransactionCommitAndRollback();
+    }
+
+    private void testTransactionCommitAndRollback() {
+        System.out.println("\n========== TEST: Transaction & Rollback ==========");
+
+        String commitEmail = "txn.commit@example.com";
+        String rollbackEmail = "txn.rollback@example.com";
+
+        testTransactionCommit(commitEmail);
+        testTransactionRollback(rollbackEmail);
+        testTransactionRollbackDuringDelete();
+    }
+
+    private void testTransactionCommit(String email) {
+        System.out.println("\n--- 1. COMMIT: student + enrollment saved together ---");
+        try {
+            if (transactionService.studentExistsByEmail(email)) {
+                System.out.println("Commit test student already exists, skipping insert");
+                return;
+            }
+
+            Student saved = transactionService.commitStudentWithEnrollment(
+                    "STU_TXN_COMMIT",
+                    email,
+                    "9111111111",
+                    DEPT_CODE,
+                    COURSE_CODE,
+                    "SEM1",
+                    "2025-26");
+
+            System.out.println("COMMIT success");
+            System.out.println("   Student ID in DB: " + saved.getId());
+            System.out.println("   Email exists: " + transactionService.studentExistsByEmail(email));
+            System.out.println("   Enrollments: " + transactionService.countEnrollmentsByStudentId(saved.getId()));
+
+        } catch (Exception e) {
+            System.out.println("COMMIT failed: " + e.getMessage());
+        }
+    }
+
+    private void testTransactionRollback(String email) {
+        System.out.println("\n--- 2. ROLLBACK: exception after save → nothing persisted ---");
+        boolean before = transactionService.studentExistsByEmail(email);
+        System.out.println("   Email exists BEFORE: " + before);
+
+        try {
+            transactionService.rollbackAfterStudentSave(
+                    "STU_TXN_ROLLBACK",
+                    email,
+                    "9222222222",
+                    DEPT_CODE);
+            System.out.println("ROLLBACK test FAILED — no exception thrown");
+        } catch (BusinessValidationException e) {
+            System.out.println("   Exception caught: " + e.getMessage());
+        }
+
+        boolean after = transactionService.studentExistsByEmail(email);
+        System.out.println("   Email exists AFTER rollback: " + after);
+
+        if (!after) {
+            System.out.println("ROLLBACK verified — student was NOT saved to database");
+        } else {
+            System.out.println("ROLLBACK FAILED — student still exists in database!");
+        }
+    }
+
+    private void testTransactionRollbackDuringDelete() {
+        System.out.println("\n--- 3. ROLLBACK during delete: enrollments restored ---");
+
+        Student student = studentRepository.findByStudentId("STU_TXN_COMMIT").orElse(null);
+        if (student == null) {
+            System.out.println("   Skipped — run commit test first to create STU_TXN_COMMIT");
+            return;
+        }
+
+        long enrollmentsBefore = transactionService.countEnrollmentsByStudentId(student.getId());
+        System.out.println("   Enrollments BEFORE: " + enrollmentsBefore);
+
+        try {
+            transactionService.rollbackDuringDelete(student.getId());
+        } catch (BusinessValidationException e) {
+            System.out.println("   Exception caught: " + e.getMessage());
+        }
+
+        long enrollmentsAfter = transactionService.countEnrollmentsByStudentId(student.getId());
+        System.out.println("   Enrollments AFTER rollback: " + enrollmentsAfter);
+
+        if (enrollmentsBefore == enrollmentsAfter && enrollmentsAfter > 0) {
+            System.out.println("ROLLBACK verified — enrollments were NOT deleted");
+        } else {
+            System.out.println("ROLLBACK check — enrollment count changed unexpectedly");
+        }
     }
 
     private void testRegisterStudent() {

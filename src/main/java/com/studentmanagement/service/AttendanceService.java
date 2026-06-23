@@ -4,6 +4,7 @@ import com.studentmanagement.dto.request.AttendanceMarkRequest;
 import com.studentmanagement.exception.BusinessValidationException;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
+import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Attendance;
 import com.studentmanagement.model.Course;
 import com.studentmanagement.model.Student;
@@ -38,7 +39,7 @@ public class AttendanceService {
         this.enrollmentRepository = enrollmentRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Attendance markAttendance(AttendanceMarkRequest request) {
         Student student = studentRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException(

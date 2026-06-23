@@ -4,6 +4,7 @@ import com.studentmanagement.dto.request.FeeCreateRequest;
 import com.studentmanagement.dto.request.FeePaymentRequest;
 import com.studentmanagement.exception.BusinessValidationException;
 import com.studentmanagement.exception.ResourceNotFoundException;
+import com.studentmanagement.exception.ServiceException;
 import com.studentmanagement.model.Fee;
 import com.studentmanagement.model.Student;
 import com.studentmanagement.model.enums.FeeStatus;
@@ -28,7 +29,7 @@ public class FeesService {
         this.studentRepository = studentRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Fee createFeeRecord(FeeCreateRequest request) {
         Student student = studentRepository.findByStudentId(request.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -48,7 +49,7 @@ public class FeesService {
         return feeRepository.save(fee);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = ServiceException.class)
     public Fee payFees(FeePaymentRequest request) {
         Fee fee = feeRepository.findById(request.getFeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fee record not found with id: " + request.getFeeId()));
