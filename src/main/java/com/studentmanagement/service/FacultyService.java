@@ -1,6 +1,8 @@
 package com.studentmanagement.service;
 
 import com.studentmanagement.dto.request.FacultyRegistrationRequest;
+import com.studentmanagement.dto.request.FacultyUpdateRequest;
+import com.studentmanagement.dto.response.FacultyResponse;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
 import com.studentmanagement.exception.ServiceException;
@@ -29,7 +31,7 @@ public class FacultyService {
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Instructor registerFaculty(FacultyRegistrationRequest request) {
+    public FacultyResponse registerFaculty(FacultyRegistrationRequest request) {
         if (instructorRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Faculty email already registered: " + request.getEmail());
         }
@@ -37,9 +39,7 @@ public class FacultyService {
             throw new DuplicateResourceException("Employee ID already exists: " + request.getEmployeeId());
         }
 
-        Department department = departmentRepository.findByCode(request.getDepartmentCode())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Department not found with code: " + request.getDepartmentCode()));
+        Department department = findDepartmentByCode(request.getDepartmentCode());
 
         Instructor instructor = Instructor.builder()
                 .employeeId(request.getEmployeeId())
@@ -51,12 +51,12 @@ public class FacultyService {
                 .department(department)
                 .build();
 
-        return instructorRepository.save(instructor);
+        return toResponse(instructorRepository.save(instructor));
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Instructor updateFaculty(Long id, FacultyRegistrationRequest request) {
-        Instructor instructor = getInstructorById(id);
+    public FacultyResponse updateFaculty(Long id, FacultyUpdateRequest request) {
+        Instructor instructor = getInstructorEntityById(id);
 
         if (StringUtils.hasText(request.getEmail()) && !request.getEmail().equals(instructor.getEmail())) {
             if (instructorRepository.existsByEmail(request.getEmail())) {
@@ -78,13 +78,10 @@ public class FacultyService {
             instructor.setSpecialization(request.getSpecialization());
         }
         if (StringUtils.hasText(request.getDepartmentCode())) {
-            Department department = departmentRepository.findByCode(request.getDepartmentCode())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Department not found with code: " + request.getDepartmentCode()));
-            instructor.setDepartment(department);
+            instructor.setDepartment(findDepartmentByCode(request.getDepartmentCode()));
         }
 
-        return instructorRepository.save(instructor);
+        return toResponse(instructorRepository.save(instructor));
     }
 
     @Transactional(rollbackFor = ServiceException.class)
@@ -95,21 +92,48 @@ public class FacultyService {
         instructorRepository.deleteById(id);
     }
 
-    public Instructor findFacultyById(Long id) {
-        return getInstructorById(id);
+    public FacultyResponse findFacultyById(Long id) {
+        return toResponse(getInstructorEntityById(id));
     }
 
-    public Instructor findFacultyByEmail(String email) {
+    public FacultyResponse findFacultyByEmail(String email) {
         return instructorRepository.findByEmail(email)
+                .map(this::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Faculty not found with email: " + email));
     }
 
-    public List<Instructor> searchFaculty(String keyword) {
-        return instructorRepository.searchByName(keyword);
+    public List<FacultyResponse> searchFaculty(String keyword) {
+        return instructorRepository.searchByName(keyword).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    private Instructor getInstructorById(Long id) {
+    private Department findDepartmentByCode(String departmentCode) {
+        return departmentRepository.findByCode(departmentCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Department not found with code: " + departmentCode));
+    }
+
+    private Instructor getInstructorEntityById(Long id) {
         return instructorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Faculty not found with id: " + id));
+    }
+
+    private FacultyResponse toResponse(Instructor instructor) {
+        FacultyResponse.FacultyResponseBuilder builder = FacultyResponse.builder()
+                .id(instructor.getId())
+                .employeeId(instructor.getEmployeeId())
+                .firstName(instructor.getFirstName())
+                .lastName(instructor.getLastName())
+                .email(instructor.getEmail())
+                .phone(instructor.getPhone())
+                .specialization(instructor.getSpecialization());
+
+        if (instructor.getDepartment() != null) {
+            builder.departmentCode(instructor.getDepartment().getCode())
+                    .departmentName(instructor.getDepartment().getName());
+        }
+
+        return builder.build();
     }
 }

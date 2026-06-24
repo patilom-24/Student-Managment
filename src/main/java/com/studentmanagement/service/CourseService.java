@@ -1,6 +1,9 @@
 package com.studentmanagement.service;
 
+import com.studentmanagement.dto.request.AssignInstructorRequest;
 import com.studentmanagement.dto.request.CourseCreateRequest;
+import com.studentmanagement.dto.request.CourseUpdateRequest;
+import com.studentmanagement.dto.response.CourseResponse;
 import com.studentmanagement.exception.DuplicateResourceException;
 import com.studentmanagement.exception.ResourceNotFoundException;
 import com.studentmanagement.exception.ServiceException;
@@ -34,14 +37,12 @@ public class CourseService {
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Course createCourse(CourseCreateRequest request) {
+    public CourseResponse createCourse(CourseCreateRequest request) {
         if (courseRepository.existsByCourseCode(request.getCourseCode())) {
             throw new DuplicateResourceException("Course code already exists: " + request.getCourseCode());
         }
 
-        Department department = departmentRepository.findByCode(request.getDepartmentCode())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Department not found with code: " + request.getDepartmentCode()));
+        Department department = findDepartmentByCode(request.getDepartmentCode());
 
         Course.CourseBuilder courseBuilder = Course.builder()
                 .courseCode(request.getCourseCode())
@@ -53,18 +54,15 @@ public class CourseService {
                 .department(department);
 
         if (StringUtils.hasText(request.getInstructorEmployeeId())) {
-            Instructor instructor = instructorRepository.findByEmployeeId(request.getInstructorEmployeeId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Instructor not found with employee ID: " + request.getInstructorEmployeeId()));
-            courseBuilder.instructor(instructor);
+            courseBuilder.instructor(findInstructorByEmployeeId(request.getInstructorEmployeeId()));
         }
 
-        return courseRepository.save(courseBuilder.build());
+        return toResponse(courseRepository.save(courseBuilder.build()));
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Course updateCourse(Long id, CourseCreateRequest request) {
-        Course course = getCourseById(id);
+    public CourseResponse updateCourse(Long id, CourseUpdateRequest request) {
+        Course course = getCourseEntityById(id);
 
         if (StringUtils.hasText(request.getCourseCode())
                 && !request.getCourseCode().equals(course.getCourseCode())
@@ -91,19 +89,13 @@ public class CourseService {
             course.setAcademicYear(request.getAcademicYear());
         }
         if (StringUtils.hasText(request.getDepartmentCode())) {
-            Department department = departmentRepository.findByCode(request.getDepartmentCode())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Department not found with code: " + request.getDepartmentCode()));
-            course.setDepartment(department);
+            course.setDepartment(findDepartmentByCode(request.getDepartmentCode()));
         }
         if (StringUtils.hasText(request.getInstructorEmployeeId())) {
-            Instructor instructor = instructorRepository.findByEmployeeId(request.getInstructorEmployeeId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Instructor not found with employee ID: " + request.getInstructorEmployeeId()));
-            course.setInstructor(instructor);
+            course.setInstructor(findInstructorByEmployeeId(request.getInstructorEmployeeId()));
         }
 
-        return courseRepository.save(course);
+        return toResponse(courseRepository.save(course));
     }
 
     @Transactional(rollbackFor = ServiceException.class)
@@ -114,32 +106,71 @@ public class CourseService {
         courseRepository.deleteById(id);
     }
 
-    public Course findCourseById(Long id) {
-        return getCourseById(id);
+    public CourseResponse findCourseById(Long id) {
+        return toResponse(getCourseEntityById(id));
     }
 
-    public Course findCourseByCode(String courseCode) {
+    public CourseResponse findCourseByCode(String courseCode) {
         return courseRepository.findByCourseCode(courseCode)
+                .map(this::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found with code: " + courseCode));
     }
 
-    public List<Course> searchCourse(String keyword) {
-        return courseRepository.findByCourseNameContainingIgnoreCase(keyword);
+    public List<CourseResponse> searchCourse(String keyword) {
+        return courseRepository.findByCourseNameContainingIgnoreCase(keyword).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Course assignInstructorToCourse(String courseCode, String instructorEmployeeId) {
-        Course course = findCourseByCode(courseCode);
-        Instructor instructor = instructorRepository.findByEmployeeId(instructorEmployeeId)
+    public CourseResponse assignInstructorToCourse(AssignInstructorRequest request) {
+        Course course = courseRepository.findByCourseCode(request.getCourseCode())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Instructor not found with employee ID: " + instructorEmployeeId));
+                        "Course not found with code: " + request.getCourseCode()));
+        Instructor instructor = findInstructorByEmployeeId(request.getInstructorEmployeeId());
 
         course.setInstructor(instructor);
-        return courseRepository.save(course);
+        return toResponse(courseRepository.save(course));
     }
 
-    private Course getCourseById(Long id) {
+    private Department findDepartmentByCode(String departmentCode) {
+        return departmentRepository.findByCode(departmentCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Department not found with code: " + departmentCode));
+    }
+
+    private Instructor findInstructorByEmployeeId(String employeeId) {
+        return instructorRepository.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Instructor not found with employee ID: " + employeeId));
+    }
+
+    private Course getCourseEntityById(Long id) {
         return courseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + id));
+    }
+
+    private CourseResponse toResponse(Course course) {
+        CourseResponse.CourseResponseBuilder builder = CourseResponse.builder()
+                .id(course.getId())
+                .courseCode(course.getCourseCode())
+                .courseName(course.getCourseName())
+                .description(course.getDescription())
+                .credits(course.getCredits())
+                .semester(course.getSemester())
+                .academicYear(course.getAcademicYear());
+
+        if (course.getDepartment() != null) {
+            builder.departmentCode(course.getDepartment().getCode())
+                    .departmentName(course.getDepartment().getName());
+        }
+
+        if (course.getInstructor() != null) {
+            Instructor instructor = course.getInstructor();
+            builder.instructorEmployeeId(instructor.getEmployeeId())
+                    .instructorName(instructor.getFirstName() + " " + instructor.getLastName());
+        }
+
+        return builder.build();
     }
 }

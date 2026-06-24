@@ -2,6 +2,7 @@ package com.studentmanagement.service;
 
 import com.studentmanagement.dto.request.FeeCreateRequest;
 import com.studentmanagement.dto.request.FeePaymentRequest;
+import com.studentmanagement.dto.response.FeeResponse;
 import com.studentmanagement.exception.BusinessValidationException;
 import com.studentmanagement.exception.ResourceNotFoundException;
 import com.studentmanagement.exception.ServiceException;
@@ -30,10 +31,8 @@ public class FeesService {
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Fee createFeeRecord(FeeCreateRequest request) {
-        Student student = studentRepository.findByStudentId(request.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Student not found with ID: " + request.getStudentId()));
+    public FeeResponse createFeeRecord(FeeCreateRequest request) {
+        Student student = findStudentByStudentId(request.getStudentId());
 
         Fee fee = Fee.builder()
                 .student(student)
@@ -46,11 +45,11 @@ public class FeesService {
                 .semester(request.getSemester())
                 .build();
 
-        return feeRepository.save(fee);
+        return toResponse(feeRepository.save(fee));
     }
 
     @Transactional(rollbackFor = ServiceException.class)
-    public Fee payFees(FeePaymentRequest request) {
+    public FeeResponse payFees(FeePaymentRequest request) {
         Fee fee = feeRepository.findById(request.getFeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fee record not found with id: " + request.getFeeId()));
 
@@ -73,20 +72,51 @@ public class FeesService {
             fee.setStatus(FeeStatus.PARTIAL);
         }
 
-        return feeRepository.save(fee);
+        return toResponse(feeRepository.save(fee));
     }
 
-    public List<Fee> getFeesByStudent(String studentId) {
-        Student student = studentRepository.findByStudentId(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Student not found with ID: " + studentId));
-        return feeRepository.findByStudent_Id(student.getId());
+    public List<FeeResponse> getFeesByStudent(String studentId) {
+        Student student = findStudentByStudentId(studentId);
+        return feeRepository.findByStudent_Id(student.getId()).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public List<Fee> getPendingFeesByStudent(String studentId) {
-        Student student = studentRepository.findByStudentId(studentId)
+    public List<FeeResponse> getPendingFeesByStudent(String studentId) {
+        Student student = findStudentByStudentId(studentId);
+        return feeRepository.findByStudent_IdAndStatus(student.getId(), FeeStatus.PENDING).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private Student findStudentByStudentId(String studentId) {
+        return studentRepository.findByStudentId(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Student not found with ID: " + studentId));
-        return feeRepository.findByStudent_IdAndStatus(student.getId(), FeeStatus.PENDING);
+    }
+
+    private FeeResponse toResponse(Fee fee) {
+        BigDecimal paidAmount = fee.getPaidAmount() != null ? fee.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal outstanding = fee.getAmount().subtract(paidAmount);
+
+        FeeResponse.FeeResponseBuilder builder = FeeResponse.builder()
+                .id(fee.getId())
+                .feeType(fee.getFeeType())
+                .amount(fee.getAmount())
+                .paidAmount(paidAmount)
+                .outstandingAmount(outstanding)
+                .status(fee.getStatus())
+                .dueDate(fee.getDueDate())
+                .paidDate(fee.getPaidDate())
+                .academicYear(fee.getAcademicYear())
+                .semester(fee.getSemester());
+
+        if (fee.getStudent() != null) {
+            Student student = fee.getStudent();
+            builder.studentId(student.getStudentId())
+                    .studentName(student.getFirstName() + " " + student.getLastName());
+        }
+
+        return builder.build();
     }
 }
