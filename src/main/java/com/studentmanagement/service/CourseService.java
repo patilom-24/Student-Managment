@@ -106,6 +106,12 @@ public class CourseService {
         courseRepository.deleteById(id);
     }
 
+    public List<CourseResponse> getAllCourses() {
+        return courseRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public CourseResponse findCourseById(Long id) {
         return toResponse(getCourseEntityById(id));
     }

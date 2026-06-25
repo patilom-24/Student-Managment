@@ -133,6 +133,12 @@ public class StudentService {
         studentRepository.deleteById(id);
     }
 
+    public List<StudentResponse> getAllStudents() {
+        return studentRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public StudentResponse findStudentById(Long id) {
         return toResponse(getStudentEntityById(id));
     }

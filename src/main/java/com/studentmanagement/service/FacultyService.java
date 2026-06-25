@@ -92,6 +92,12 @@ public class FacultyService {
         instructorRepository.deleteById(id);
     }
 
+    public List<FacultyResponse> getAllFaculty() {
+        return instructorRepository.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public FacultyResponse findFacultyById(Long id) {
         return toResponse(getInstructorEntityById(id));
     }
