@@ -1,6 +1,7 @@
 package com.studentmanagement.controller;
 
 import com.studentmanagement.dto.request.AttendanceMarkRequest;
+import com.studentmanagement.dto.response.ApiResponse;
 import com.studentmanagement.dto.response.AttendancePercentageResponse;
 import com.studentmanagement.dto.response.AttendanceResponse;
 import com.studentmanagement.service.AttendanceService;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/attendance")
+@RequestMapping("/api/v1/attendance")
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
@@ -28,28 +29,30 @@ public class AttendanceController {
     }
 
     @PostMapping
-    public ResponseEntity<AttendanceResponse> markAttendance(
+    public ResponseEntity<ApiResponse<AttendanceResponse>> markAttendance(
             @Valid @RequestBody AttendanceMarkRequest request) {
-        AttendanceResponse marked = attendanceService.markAttendance(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(marked);
+        AttendanceResponse response = attendanceService.markAttendance(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Attendance marked successfully", response));
     }
 
     @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<AttendanceResponse>> getAttendanceByStudent(
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAttendanceByStudent(
             @PathVariable String studentId) {
-        return ResponseEntity.ok(attendanceService.getAttendanceByStudent(studentId));
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getAttendanceByStudent(studentId)));
     }
 
     @GetMapping("/course/{courseCode}")
-    public ResponseEntity<List<AttendanceResponse>> getAttendanceByCourse(
+    public ResponseEntity<ApiResponse<List<AttendanceResponse>>> getAttendanceByCourse(
             @PathVariable String courseCode) {
-        return ResponseEntity.ok(attendanceService.getAttendanceByCourse(courseCode));
+        return ResponseEntity.ok(ApiResponse.success(attendanceService.getAttendanceByCourse(courseCode)));
     }
 
     @GetMapping("/percentage")
-    public ResponseEntity<AttendancePercentageResponse> getAttendancePercentage(
+    public ResponseEntity<ApiResponse<AttendancePercentageResponse>> getAttendancePercentage(
             @RequestParam String studentId,
             @RequestParam String courseCode) {
-        return ResponseEntity.ok(attendanceService.getAttendancePercentage(studentId, courseCode));
+        return ResponseEntity.ok(ApiResponse.success(
+                attendanceService.getAttendancePercentage(studentId, courseCode)));
     }
 }

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Student Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; background: #f5f7fb; color: #1f2937; }
+        .card { background: #fff; padding: 1.5rem; border-radius: 8px; max-width: 720px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        a { color: #2563eb; text-decoration: none; margin-right: 1rem; }
+        code { background: #eef2ff; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1 th:text="${title}">Student Management System</h1>
+    <p>REST API base: <code th:text="${apiBaseUrl}">/api/v1</code></p>
+    <p>
+        <a href="/page/login">Login Page</a>
+        <a href="/page/docs">Security Docs</a>
+    </p>
+    <p>All protected APIs require header:</p>
+    <pre>Authorization: Bearer &lt;your-jwt-token&gt;</pre>
+</div>
+</body>
+</html>

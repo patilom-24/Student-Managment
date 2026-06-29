@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; background: #f5f7fb; }
+        .card { background: #fff; padding: 1.5rem; border-radius: 8px; max-width: 420px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        label { display: block; margin-top: .75rem; font-weight: 600; }
+        input { width: 100%; padding: .6rem; margin-top: .25rem; box-sizing: border-box; }
+        button { margin-top: 1rem; padding: .6rem 1rem; background: #2563eb; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
+        pre { background: #111827; color: #e5e7eb; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: .85rem; }
+        .hint { color: #6b7280; font-size: .9rem; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Login</h1>
+    <p class="hint">Demo users: admin/admin123, faculty/faculty123, student/student123</p>
+
+    <label for="username">Username</label>
+    <input id="username" type="text" value="admin">
+
+    <label for="password">Password</label>
+    <input id="password" type="password" value="admin123">
+
+    <button type="button" onclick="login()">Get JWT Token</button>
+
+    <h3>Token Response</h3>
+    <pre id="result">Click "Get JWT Token"</pre>
+
+    <p><a href="/page/home">Back to Home</a></p>
+</div>
+
+<script th:inline="javascript">
+    async function login() {
+        const loginUrl = /*[[${loginUrl}]]*/ '/api/v1/auth/login';
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        const response = await fetch(loginUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+
+        const token = data?.data?.accessToken;
+        if (token) {
+            localStorage.setItem('jwtToken', token);
+        }
+    }
+</script>
+</body>
+</html>

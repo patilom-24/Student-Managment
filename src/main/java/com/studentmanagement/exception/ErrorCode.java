@@ -6,6 +6,8 @@ public enum ErrorCode {
     DUPLICATE_RESOURCE("Duplicate resource"),
     VALIDATION_FAILED("Business validation failed"),
     INVALID_REQUEST("Invalid request"),
+    UNAUTHORIZED("Authentication required"),
+    FORBIDDEN("Access denied"),
     INTERNAL_ERROR("Internal server error");
 
     private final String defaultMessage;

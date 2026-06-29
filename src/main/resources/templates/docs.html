@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">API Security Guide</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; background: #f5f7fb; color: #1f2937; }
+        .card { background: #fff; padding: 1.5rem; border-radius: 8px; max-width: 800px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        pre { background: #111827; color: #e5e7eb; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { border: 1px solid #e5e7eb; padding: .5rem; text-align: left; }
+        a { color: #2563eb; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>JWT + CORS + Authorization Header</h1>
+
+    <h2>1. Login (no token required)</h2>
+    <pre>POST /api/v1/auth/login
+Content-Type: application/json
+
+{ "username": "admin", "password": "admin123" }</pre>
+
+    <h2>2. Use token in request header</h2>
+    <pre>GET /api/v1/students
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...</pre>
+
+    <h2>3. Role access</h2>
+    <table>
+        <tr><th>Role</th><th>Access</th></tr>
+        <tr><td>ADMIN</td><td>Full read + write</td></tr>
+        <tr><td>FACULTY</td><td>Full read + write</td></tr>
+        <tr><td>STUDENT</td><td>Read-only (GET)</td></tr>
+    </table>
+
+    <h2>4. CORS allowed origins</h2>
+    <p>Configured in <code>application.properties</code> for React/Vite/Live Server frontends.</p>
+
+    <h2>5. Postman</h2>
+    <p>Authorization tab → Type: Bearer Token → paste <code>accessToken</code> from login response.</p>
+
+    <p><a href="/page/login">Login Page</a> | <a href="/page/home">Home</a></p>
+</div>
+</body>
+</html>
