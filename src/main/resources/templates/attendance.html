@@ -9,102 +9,145 @@
 <body>
 <div class="app-layout">
     <div th:replace="~{layout-nav :: sidebar}"></div>
+
     <div class="main-content">
         <header class="page-header">
             <h1 class="page-title">Attendance</h1>
         </header>
+
         <main class="page-body">
 
+            <!-- ── Top row: Mark form + Percentage card ── -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
 
                 <!-- Mark Attendance — POST /attendance -->
                 <div class="card">
-                    <div class="card-header"><span class="card-title">Mark Attendance</span></div>
+                    <div class="card-header"><span class="card-title">✏ Mark Attendance</span></div>
                     <div class="card-body">
                         <form id="attendance-form" onsubmit="return false;">
+
                             <div class="form-group" style="margin-bottom:.75rem">
-                                <label for="att-studentId">Student ID *</label>
-                                <input id="att-studentId" type="text" placeholder="e.g. STU2024001">
+                                <label for="att-studentId">Student *</label>
+                                <select id="att-studentId" data-type="student">
+                                    <option value="">Loading students…</option>
+                                </select>
                                 <span class="field-error" id="att-studentId-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
-                                <label for="att-courseCode">Course Code *</label>
-                                <input id="att-courseCode" type="text" placeholder="e.g. CS101">
+                                <label for="att-courseCode">Course *</label>
+                                <select id="att-courseCode" data-type="courseCode">
+                                    <option value="">Loading courses…</option>
+                                </select>
                                 <span class="field-error" id="att-courseCode-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="att-date">Date *</label>
                                 <input id="att-date" type="date">
                                 <span class="field-error" id="att-date-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="att-status">Status *</label>
                                 <select id="att-status">
                                     <option value="">— Select Status —</option>
-                                    <option value="PRESENT">Present</option>
-                                    <option value="ABSENT">Absent</option>
-                                    <option value="LATE">Late</option>
+                                    <option value="PRESENT">✅ Present</option>
+                                    <option value="ABSENT">❌ Absent</option>
+                                    <option value="LATE">⏰ Late</option>
                                 </select>
                                 <span class="field-error" id="att-status-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="att-remarks">Remarks</label>
                                 <input id="att-remarks" type="text" placeholder="Optional notes">
                             </div>
-                            <button class="btn btn-primary" style="width:100%" onclick="markAttendance()">Mark Attendance</button>
+
+                            <button class="btn btn-primary" style="width:100%" onclick="markAttendance()">
+                                Mark Attendance
+                            </button>
                         </form>
                     </div>
                 </div>
 
                 <!-- Attendance Percentage — GET /attendance/percentage -->
                 <div class="card">
-                    <div class="card-header"><span class="card-title">Attendance Percentage</span></div>
+                    <div class="card-header"><span class="card-title">📊 Attendance Percentage</span></div>
                     <div class="card-body">
+
                         <div class="form-group" style="margin-bottom:.75rem">
-                            <label for="pct-studentId">Student ID</label>
-                            <input id="pct-studentId" type="text" placeholder="e.g. STU2024001"
-                                   onkeydown="if(event.key==='Enter') loadAttendancePercentage()">
+                            <label for="pct-studentId">Student</label>
+                            <select id="pct-studentId" data-type="student">
+                                <option value="">Loading students…</option>
+                            </select>
                         </div>
+
                         <div class="form-group" style="margin-bottom:.75rem">
-                            <label for="pct-courseCode">Course Code</label>
-                            <input id="pct-courseCode" type="text" placeholder="e.g. CS101"
-                                   onkeydown="if(event.key==='Enter') loadAttendancePercentage()">
+                            <label for="pct-courseCode">Course</label>
+                            <select id="pct-courseCode" data-type="courseCode">
+                                <option value="">Loading courses…</option>
+                            </select>
                         </div>
-                        <button class="btn btn-primary" style="width:100%;margin-bottom:1rem" onclick="loadAttendancePercentage()">Calculate</button>
+
+                        <button class="btn btn-primary" style="width:100%;margin-bottom:1rem"
+                                onclick="loadAttendancePercentage()">
+                            Calculate
+                        </button>
+
                         <div id="percentage-result" style="display:none"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- View Attendance Records -->
+            <!-- ── View Attendance Records ── -->
             <div class="card">
-                <div class="card-header"><span class="card-title">View Attendance Records</span></div>
+                <div class="card-header">
+                    <span class="card-title">📋 All Attendance Records</span>
+                </div>
                 <div class="card-body">
-                    <div class="toolbar">
+
+                    <!-- Filter toolbar -->
+                    <div class="toolbar" style="margin-bottom:1rem">
                         <div class="search-box">
-                            <input id="att-filter-studentId" type="text" placeholder="Filter by Student ID"
-                                   onkeydown="if(event.key==='Enter') loadAttendanceByStudent()">
-                            <button class="btn btn-primary" onclick="loadAttendanceByStudent()">By Student</button>
+                            <label style="white-space:nowrap;align-self:center;font-size:.8rem;font-weight:600">Filter by Student:</label>
+                            <select id="att-filter-studentId" data-type="student" style="min-width:220px">
+                                <option value="">— All Students —</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="filterByStudent()">Load</button>
                         </div>
+
                         <div class="search-box">
-                            <input id="att-filter-courseCode" type="text" placeholder="Filter by Course Code"
-                                   onkeydown="if(event.key==='Enter') loadAttendanceByCourse()">
-                            <button class="btn btn-outline" onclick="loadAttendanceByCourse()">By Course</button>
+                            <label style="white-space:nowrap;align-self:center;font-size:.8rem;font-weight:600">Filter by Course:</label>
+                            <select id="att-filter-courseCode" data-type="courseCode" style="min-width:220px">
+                                <option value="">— All Courses —</option>
+                            </select>
+                            <button class="btn btn-outline" onclick="filterByCourse()">Load</button>
                         </div>
+
+                        <button class="btn btn-secondary" onclick="loadAllAttendance()">Show All</button>
                     </div>
+
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Student ID</th><th>Student Name</th><th>Course Code</th>
-                                    <th>Course Name</th><th>Date</th><th>Status</th><th>Remarks</th>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Course Code</th>
+                                    <th>Course Name</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Remarks</th>
                                 </tr>
                             </thead>
                             <tbody id="attendance-tbody">
-                                <tr><td colspan="7" class="empty-state">Use the filters above to load records.</td></tr>
+                                <tr><td colspan="7" class="empty-state">Loading attendance records…</td></tr>
                             </tbody>
                         </table>
                     </div>
+
+                    <div id="att-record-count" style="padding:.5rem 0;font-size:.8rem;color:var(--text-muted)"></div>
                 </div>
             </div>
 
@@ -116,12 +159,42 @@
 <script th:src="@{/js/auth.js}"></script>
 <script th:src="@{/js/validation.js}"></script>
 <script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/attendance.js}"></script>
 <script>
     requireAuth();
     renderUserInfo();
     document.getElementById('nav-attendance').classList.add('active');
+
+    // Default today's date in mark form
     document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
+
+    // 1. Load all dropdowns first, then auto-load the table
+    (async function init() {
+        await loadDropdowns(['students', 'courses']);
+        await loadAllAttendance();   // auto-load on page open
+    })();
+
+    // Filter wrappers that read from the <select> elements
+    function filterByStudent() {
+        const sid = document.getElementById('att-filter-studentId').value;
+        if (!sid) { loadAllAttendance(); return; }
+        // Set the text-based field attendance.js uses and call the loader
+        document.getElementById('att-filter-sid-hidden').value = sid;
+        loadAttendanceByStudentSelect(sid);
+    }
+
+    function filterByCourse() {
+        const code = document.getElementById('att-filter-courseCode').value;
+        if (!code) { loadAllAttendance(); return; }
+        document.getElementById('att-filter-code-hidden').value = code;
+        loadAttendanceByCourseSelect(code);
+    }
 </script>
+
+<!-- hidden inputs so attendance.js val() helpers still work -->
+<input type="hidden" id="att-filter-sid-hidden">
+<input type="hidden" id="att-filter-code-hidden">
+
 </body>
 </html>

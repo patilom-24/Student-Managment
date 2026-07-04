@@ -20,6 +20,7 @@ async function loadDropdowns(types) {
     if (types.includes('departments')) tasks.push(_loadDepartments());
     if (types.includes('courses'))     tasks.push(_loadCourses());
     if (types.includes('faculty'))     tasks.push(_loadFaculty());
+    if (types.includes('students'))    tasks.push(_loadStudents());
     await Promise.allSettled(tasks);   // never block the page even if one fails
 }
 
@@ -122,4 +123,71 @@ async function refreshDropdowns(types) {
     // Clear cache so fresh data is fetched
     types.forEach(t => delete _dropdownCache[t]);
     await loadDropdowns(types);
+}
+
+// ── STUDENTS — GET /students ─────────────────────────────────────────────────
+async function _loadStudents() {
+    try {
+        if (!_dropdownCache.students) {
+            const res = await apiGet('/students');
+            _dropdownCache.students = res.data || [];
+        }
+        _fillStudentSelects(_dropdownCache.students);
+    } catch (err) {
+        console.warn('Could not load students for dropdown:', err.message);
+    }
+}
+
+function _fillStudentSelects(students) {
+    document.querySelectorAll('select[data-type="student"]').forEach(sel => {
+        const currentVal = sel.value;
+        const placeholder = '<option value="">— Select Student —</option>';
+        const options = students.map(s =>
+            `<option value="${escHtml(s.studentId)}">
+                ${escHtml(s.studentId)} — ${escHtml(s.firstName)} ${escHtml(s.lastName)}
+            </option>`
+        ).join('');
+        sel.innerHTML = placeholder + options;
+        if (currentVal) sel.value = currentVal;
+    });
+    return students;   // return so callers can use the list
+}
+
+// ── Get cached students list (for auto-load logic) ───────────────────────────
+function getCachedStudents() {
+    return _dropdownCache.students || [];
+}
+
+// ── Get cached courses list ──────────────────────────────────────────────────
+function getCachedCourses() {
+    return _dropdownCache.courses || [];
+}
+
+// ── Fill plain course-code-only selects (data-type="courseCode") ─────────────
+// Used in attendance/fees filters where only the code is needed
+function _fillCourseCodeSelects(courses) {
+    document.querySelectorAll('select[data-type="courseCode"]').forEach(sel => {
+        const currentVal = sel.value;
+        const placeholder = '<option value="">— Select Course —</option>';
+        const options = courses.map(c =>
+            `<option value="${escHtml(c.courseCode)}">${escHtml(c.courseCode)} — ${escHtml(c.courseName)}</option>`
+        ).join('');
+        sel.innerHTML = placeholder + options;
+        if (currentVal) sel.value = currentVal;
+    });
+}
+
+// Override _loadCourses to also fill courseCode selects
+const _origLoadCourses = _loadCourses;
+async function _loadCourses() {
+    try {
+        if (!_dropdownCache.courses) {
+            const res = await apiGet('/courses');
+            _dropdownCache.courses = res.data || [];
+        }
+        _fillCourseSelects(_dropdownCache.courses);
+        _fillCourseCodeSelects(_dropdownCache.courses);
+    } catch (err) {
+        console.warn('Could not load courses for dropdown:', err.message);
+    }
 }
