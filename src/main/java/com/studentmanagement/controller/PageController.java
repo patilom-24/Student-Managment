@@ -56,4 +56,16 @@ public class PageController {
         model.addAttribute("title", "API Security Guide");
         return "docs";
     }
+
+    @GetMapping("/faculty-portal")
+    public String facultyPortal(Model model) {
+        model.addAttribute("title", "Faculty Dashboard — Student Management System");
+        return "faculty-portal";
+    }
+
+    @GetMapping("/student-portal")
+    public String studentPortal(Model model) {
+        model.addAttribute("title", "Student Portal — Student Management System");
+        return "student-portal";
+    }
 }

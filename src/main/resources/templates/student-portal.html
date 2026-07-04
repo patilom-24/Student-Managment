@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Portal — Student Management System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .profile-card  { display:flex; gap:1.5rem; align-items:flex-start; }
+        .profile-avatar{ width:80px; height:80px; border-radius:50%; background:var(--primary);
+                         display:flex; align-items:center; justify-content:center;
+                         font-size:2rem; color:#fff; font-weight:800; flex-shrink:0; }
+        .profile-info  { flex:1; }
+        .profile-info h2 { font-size:1.3rem; font-weight:700; margin-bottom:.25rem; }
+        .profile-info p  { color:var(--text-muted); font-size:.875rem; margin:.15rem 0; }
+        .profile-grid  { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin-top:1rem; }
+        .profile-field { background:var(--bg); border-radius:6px; padding:.65rem .85rem; }
+        .profile-field .pf-label { font-size:.7rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; }
+        .profile-field .pf-value { font-size:.9rem; font-weight:600; margin-top:.15rem; }
+        .tab-bar       { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:1.5rem; }
+        .tab-btn       { padding:.6rem 1.25rem; font-size:.875rem; font-weight:600; cursor:pointer;
+                         background:none; border:none; color:var(--text-muted); border-bottom:3px solid transparent;
+                         margin-bottom:-2px; transition:color .15s, border-color .15s; }
+        .tab-btn.active{ color:var(--primary); border-bottom-color:var(--primary); }
+        .tab-pane      { display:none; }
+        .tab-pane.active { display:block; }
+        .pct-mini      { display:flex; align-items:center; gap:.75rem; padding:.6rem .85rem;
+                         background:var(--bg); border-radius:6px; margin-bottom:.5rem; }
+        .pct-mini-num  { font-size:1.3rem; font-weight:800; min-width:54px; text-align:right; }
+        .pct-mini-info { flex:1; }
+        .pct-mini-info strong { display:block; font-size:.875rem; }
+        .pct-mini-info span   { font-size:.75rem; color:var(--text-muted); }
+        .pct-green { color:var(--success); }
+        .pct-red   { color:var(--danger); }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{layout-nav :: sidebar}"></div>
+
+    <div class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Student Portal</h1>
+            <div class="header-right">
+                <span style="font-size:.8rem;color:var(--text-muted)" id="current-date"></span>
+            </div>
+        </header>
+
+        <main class="page-body">
+
+            <!-- Profile Card -->
+            <div class="card" style="margin-bottom:1.5rem" id="profile-card">
+                <div class="card-header"><span class="card-title">My Profile</span></div>
+                <div class="card-body">
+                    <div class="profile-card">
+                        <div class="profile-avatar" id="stu-avatar">?</div>
+                        <div class="profile-info">
+                            <h2 id="stu-fullname">Loading…</h2>
+                            <p id="stu-email-display"></p>
+                            <p id="stu-phone-display"></p>
+                            <div class="profile-grid" id="stu-profile-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('tab-attendance', this)">📋 Attendance</button>
+                <button class="tab-btn"        onclick="switchTab('tab-fees', this)">💰 My Fees</button>
+                <button class="tab-btn"        onclick="switchTab('tab-courses', this)">📚 Courses</button>
+            </div>
+
+            <!-- ── ATTENDANCE TAB ── -->
+            <div id="tab-attendance" class="tab-pane active">
+
+                <!-- Percentage summary per course -->
+                <div class="card" style="margin-bottom:1.5rem">
+                    <div class="card-header"><span class="card-title">Attendance Percentage by Course</span></div>
+                    <div class="card-body" id="stu-pct-list">
+                        <p style="color:var(--text-muted)">Loading percentages…</p>
+                    </div>
+                </div>
+
+                <!-- Attendance Records table -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Attendance Records</span>
+                        <div style="display:flex;gap:.5rem;align-items:center">
+                            <label style="font-size:.8rem;font-weight:600">Filter by Course:</label>
+                            <select id="stu-att-filter-course" data-type="courseCode" style="min-width:180px"
+                                    onchange="filterStuAttendance()">
+                                <option value="">All Courses</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding:0">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Course Code</th><th>Course Name</th>
+                                        <th>Date</th><th>Status</th><th>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stu-att-tbody">
+                                    <tr><td colspan="5" class="empty-state">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── FEES TAB ── -->
+            <div id="tab-fees" class="tab-pane">
+                <div id="stu-fee-summary" style="display:none;margin-bottom:1rem"></div>
+                <div class="card">
+                    <div class="card-header"><span class="card-title">My Fee Records</span></div>
+                    <div class="card-body" style="padding:0">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Fee ID</th><th>Type</th><th>Amount</th>
+                                        <th>Paid</th><th>Outstanding</th>
+                                        <th>Status</th><th>Due Date</th><th>Semester</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stu-fee-tbody">
+                                    <tr><td colspan="8" class="empty-state">Loading fees…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── COURSES TAB ── -->
+            <div id="tab-courses" class="tab-pane">
+                <div class="card">
+                    <div class="card-header"><span class="card-title">Available Courses</span></div>
+                    <div class="card-body" style="padding:0">
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Code</th><th>Course Name</th><th>Department</th>
+                                        <th>Credits</th><th>Semester</th><th>Instructor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stu-course-tbody">
+                                    <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
+<script>
+    if (!requireRole(['STUDENT'])) { /* redirected */ }
+
+    renderUserInfo();
+    applyRoleVisibility();
+    document.getElementById('nav-student-home').classList.add('active');
+    document.getElementById('current-date').textContent =
+        new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    // Tab switching — accepts the clicked button element explicitly
+    function switchTab(id, btnEl) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn') .forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if (btnEl) btnEl.classList.add('active');
+    }
+
+    // Handle hash-based tab activation from sidebar links (#courses, #attendance, #fees)
+    function activateTabFromHash() {
+        const hash = window.location.hash;
+        if (hash === '#courses')    { switchTab('tab-courses',    document.querySelector('[onclick*="tab-courses"]'));    return; }
+        if (hash === '#attendance') { switchTab('tab-attendance', document.querySelector('[onclick*="tab-attendance"]')); return; }
+        if (hash === '#fees')       { switchTab('tab-fees',       document.querySelector('[onclick*="tab-fees"]'));       return; }
+    }
+    activateTabFromHash();
+    window.addEventListener('hashchange', activateTabFromHash);
+
+    // ── All student data lives here after load ────────────────────────
+    let _myStudentId = null;
+    let _myAttendance = [];
+
+    (async function init() {
+        try {
+            const authUser = getCurrentUser();
+
+            // 1. Find my student record by searching username
+            const searchRes = await apiGet('/students/search?keyword=' + encodeURIComponent(authUser.username));
+            const students  = searchRes.data || [];
+
+            // Use first match (student username matches studentId or name)
+            // Fallback: load all and find by username match
+            let myRecord = students[0];
+            if (!myRecord) {
+                const allRes = await apiGet('/students');
+                myRecord = (allRes.data || []).find(s =>
+                    s.studentId.toLowerCase() === authUser.username.toLowerCase() ||
+                    (s.firstName + ' ' + s.lastName).toLowerCase() === authUser.username.toLowerCase()
+                );
+            }
+
+            if (!myRecord) {
+                showToast('Could not find your student profile. Contact admin.', 'warning');
+                return;
+            }
+
+            _myStudentId = myRecord.studentId;
+            renderProfile(myRecord);
+
+            // 2. Load in parallel: attendance + fees + courses
+            await loadDropdowns(['courses']);
+            const [attRes, feeRes, courseRes] = await Promise.allSettled([
+                apiGet('/attendance/student/' + encodeURIComponent(_myStudentId)),
+                apiGet('/fees/student/'       + encodeURIComponent(_myStudentId)),
+                apiGet('/courses')
+            ]);
+
+            _myAttendance = attRes.status === 'fulfilled' ? (attRes.value.data || []) : [];
+            const myFees   = feeRes.status === 'fulfilled' ? (feeRes.value.data || []) : [];
+            const courses  = courseRes.status === 'fulfilled' ? (courseRes.value.data || []) : [];
+
+            renderAttendanceTab(_myAttendance, courses);
+            renderFeesTab(myFees);
+            renderCoursesTab(courses);
+
+        } catch (err) {
+            handleApiError(err, 'Could not load your portal data.');
+        }
+    })();
+
+    // ── PROFILE ───────────────────────────────────────────────────────
+    function renderProfile(s) {
+        const full = escHtml(s.firstName) + ' ' + escHtml(s.lastName);
+        document.getElementById('stu-fullname').textContent      = full;
+        document.getElementById('stu-avatar').textContent        = s.firstName.charAt(0).toUpperCase();
+        document.getElementById('stu-email-display').textContent = '✉  ' + s.email;
+        document.getElementById('stu-phone-display').textContent = '📞 ' + s.phone;
+
+        document.getElementById('stu-profile-grid').innerHTML = `
+            <div class="profile-field"><div class="pf-label">Student ID</div>      <div class="pf-value">${escHtml(s.studentId)}</div></div>
+            <div class="profile-field"><div class="pf-label">Department</div>      <div class="pf-value">${escHtml(s.departmentName || s.departmentCode || '—')}</div></div>
+            <div class="profile-field"><div class="pf-label">Date of Birth</div>   <div class="pf-value">${formatDate(s.dateOfBirth)}</div></div>
+            <div class="profile-field"><div class="pf-label">Gender</div>          <div class="pf-value">${escHtml(s.gender || '—')}</div></div>
+            <div class="profile-field"><div class="pf-label">Enrollment Date</div> <div class="pf-value">${formatDate(s.enrollmentDate)}</div></div>
+            <div class="profile-field"><div class="pf-label">Status</div>          <div class="pf-value">${statusBadge(s.status)}</div></div>`;
+    }
+
+    // ── ATTENDANCE TAB ────────────────────────────────────────────────
+    function renderAttendanceTab(records, courses) {
+        // Build per-course percentage summary using counts from records
+        const courseMap = {};
+        records.forEach(r => {
+            if (!courseMap[r.courseCode]) courseMap[r.courseCode] = { name: r.courseName || r.courseCode, total: 0, present: 0 };
+            courseMap[r.courseCode].total++;
+            if (r.status === 'PRESENT') courseMap[r.courseCode].present++;
+        });
+
+        const pctList = document.getElementById('stu-pct-list');
+        const codes   = Object.keys(courseMap);
+        if (!codes.length) {
+            pctList.innerHTML = '<p style="color:var(--text-muted)">No attendance records yet.</p>';
+        } else {
+            pctList.innerHTML = codes.map(code => {
+                const d   = courseMap[code];
+                const pct = d.total > 0 ? ((d.present / d.total) * 100) : 0;
+                const cls = pct >= 75 ? 'pct-green' : 'pct-red';
+                return `
+                <div class="pct-mini">
+                    <div class="pct-mini-num ${cls}">${pct.toFixed(0)}%</div>
+                    <div class="pct-mini-info">
+                        <strong>${escHtml(code)} — ${escHtml(d.name)}</strong>
+                        <span>Present: ${d.present} / ${d.total} classes</span>
+                    </div>
+                    ${pct < 75 ? '<span class="badge badge-danger">Low</span>' : '<span class="badge badge-success">Good</span>'}
+                </div>`;
+            }).join('');
+        }
+
+        renderAttendanceTable(records);
+    }
+
+    function renderAttendanceTable(records) {
+        const tbody = document.getElementById('stu-att-tbody');
+        if (!records.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No attendance records found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = records.map(r => `
+            <tr>
+                <td>${escHtml(r.courseCode)}</td>
+                <td>${escHtml(r.courseName || '—')}</td>
+                <td>${formatDate(r.attendanceDate)}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${escHtml(r.remarks || '—')}</td>
+            </tr>`).join('');
+    }
+
+    function filterStuAttendance() {
+        const code = document.getElementById('stu-att-filter-course').value;
+        const filtered = code ? _myAttendance.filter(r => r.courseCode === code) : _myAttendance;
+        renderAttendanceTable(filtered);
+    }
+
+    // ── FEES TAB ──────────────────────────────────────────────────────
+    function renderFeesTab(fees) {
+        const tbody = document.getElementById('stu-fee-tbody');
+        const sumEl = document.getElementById('stu-fee-summary');
+
+        if (!fees.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No fee records found.</td></tr>';
+            if (sumEl) sumEl.style.display = 'none';
+            return;
+        }
+
+        let totalAmt = 0, totalPaid = 0, totalOutstanding = 0;
+        tbody.innerHTML = fees.map(f => {
+            totalAmt         += parseFloat(f.amount)            || 0;
+            totalPaid        += parseFloat(f.paidAmount)        || 0;
+            totalOutstanding += parseFloat(f.outstandingAmount) || 0;
+            return `
+            <tr>
+                <td><strong>${f.id}</strong></td>
+                <td>${escHtml(f.feeType)}</td>
+                <td>${formatCurrency(f.amount)}</td>
+                <td>${formatCurrency(f.paidAmount)}</td>
+                <td>${formatCurrency(f.outstandingAmount)}</td>
+                <td>${statusBadge(f.status)}</td>
+                <td>${formatDate(f.dueDate)}</td>
+                <td>${escHtml(f.semester || '—')}</td>
+            </tr>`;
+        }).join('');
+
+        if (sumEl) {
+            sumEl.style.display = 'block';
+            sumEl.innerHTML = `
+                <div class="fee-summary-grid">
+                    <div class="summary-card"><span>Total Fees</span><strong>${formatCurrency(totalAmt)}</strong></div>
+                    <div class="summary-card summary-paid"><span>Paid</span><strong>${formatCurrency(totalPaid)}</strong></div>
+                    <div class="summary-card summary-due"><span>Outstanding</span><strong>${formatCurrency(totalOutstanding)}</strong></div>
+                </div>`;
+        }
+    }
+
+    // ── COURSES TAB ───────────────────────────────────────────────────
+    function renderCoursesTab(courses) {
+        const tbody = document.getElementById('stu-course-tbody');
+        if (!courses.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No courses found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = courses.map(c => `
+            <tr>
+                <td>${escHtml(c.courseCode)}</td>
+                <td>${escHtml(c.courseName)}</td>
+                <td>${escHtml(c.departmentName || c.departmentCode || '—')}</td>
+                <td>${c.credits ?? '—'}</td>
+                <td>${escHtml(c.semester || '—')}</td>
+                <td>${escHtml(c.instructorName || '—')}</td>
+            </tr>`).join('');
+    }
+</script>
+</body>
+</html>

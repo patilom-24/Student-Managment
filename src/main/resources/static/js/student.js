@@ -78,6 +78,13 @@ function renderStudentTable(students) {
 
     tbody.innerHTML = students.map(s => {
         const fullName = escHtml(s.firstName) + ' ' + escHtml(s.lastName);
+        // FACULTY sees no edit/delete buttons
+        const actions = (typeof isAdmin === 'function' && isAdmin())
+            ? `<td class="action-cell">
+                 <button class="btn btn-sm btn-primary" onclick="openEditStudent(${s.id})">✏ Edit</button>
+                 <button class="btn btn-sm btn-danger"  onclick="deleteStudent(${s.id}, '${fullName}')">🗑 Delete</button>
+               </td>`
+            : `<td>—</td>`;
         return `
         <tr>
           <td>${escHtml(s.studentId)}</td>
@@ -87,10 +94,7 @@ function renderStudentTable(students) {
           <td>${escHtml(s.departmentName || s.departmentCode || '—')}</td>
           <td>${formatDate(s.enrollmentDate)}</td>
           <td>${statusBadge(s.status)}</td>
-          <td class="action-cell">
-            <button class="btn btn-sm btn-primary" onclick="openEditStudent(${s.id})">✏ Edit</button>
-            <button class="btn btn-sm btn-danger"  onclick="deleteStudent(${s.id}, '${fullName}')">🗑 Delete</button>
-          </td>
+          ${actions}
         </tr>`;
     }).join('');
 }

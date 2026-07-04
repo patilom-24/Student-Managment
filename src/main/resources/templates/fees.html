@@ -9,24 +9,31 @@
 <body>
 <div class="app-layout">
     <div th:replace="~{layout-nav :: sidebar}"></div>
+
     <div class="main-content">
         <header class="page-header">
             <h1 class="page-title">Fee Management</h1>
         </header>
+
         <main class="page-body">
 
+            <!-- ── Top row: Create + Payment ── -->
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
 
                 <!-- Create Fee Record — POST /fees -->
                 <div class="card">
-                    <div class="card-header"><span class="card-title">Create Fee Record</span></div>
+                    <div class="card-header"><span class="card-title">➕ Create Fee Record</span></div>
                     <div class="card-body">
                         <form id="fee-form" onsubmit="return false;">
+
                             <div class="form-group" style="margin-bottom:.75rem">
-                                <label for="fee-studentId">Student ID *</label>
-                                <input id="fee-studentId" type="text" placeholder="e.g. STU2024001">
+                                <label for="fee-studentId">Student *</label>
+                                <select id="fee-studentId" data-type="student">
+                                    <option value="">Loading students…</option>
+                                </select>
                                 <span class="field-error" id="fee-studentId-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="fee-type">Fee Type *</label>
                                 <select id="fee-type">
@@ -40,54 +47,71 @@
                                 </select>
                                 <span class="field-error" id="fee-type-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="fee-amount">Amount (₹) *</label>
                                 <input id="fee-amount" type="number" min="0.01" step="0.01" placeholder="e.g. 25000">
                                 <span class="field-error" id="fee-amount-error"></span>
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="fee-dueDate">Due Date</label>
                                 <input id="fee-dueDate" type="date">
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="fee-academicYear">Academic Year</label>
                                 <input id="fee-academicYear" type="text" placeholder="e.g. 2024-25">
                             </div>
+
                             <div class="form-group" style="margin-bottom:.75rem">
                                 <label for="fee-semester">Semester</label>
-                                <input id="fee-semester" type="text" placeholder="e.g. SEM1">
+                                <select id="fee-semester" data-type="courseCode" style="display:none"></select>
+                                <input  id="fee-semester-text" type="text" placeholder="e.g. SEM1">
+                                <!-- We use a text input here; semester is free-text in FeeCreateRequest -->
                             </div>
-                            <button class="btn btn-primary" style="width:100%" onclick="createFeeRecord()">Create Fee Record</button>
+
+                            <button class="btn btn-primary" style="width:100%" onclick="createFeeRecord()">
+                                Create Fee Record
+                            </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Record Payment — POST /fees/pay -->
+                <!-- Right column: Payment + Filter -->
                 <div class="card">
-                    <div class="card-header"><span class="card-title">Record Payment</span></div>
+                    <div class="card-header"><span class="card-title">💳 Record Payment</span></div>
                     <div class="card-body">
                         <form id="pay-form" onsubmit="return false;">
                             <div class="form-group" style="margin-bottom:.75rem">
-                                <label for="pay-feeId">Fee Record ID *</label>
-                                <input id="pay-feeId" type="number" min="1" placeholder="Fee ID from the table below">
+                                <label for="pay-feeId">Fee Record ID *
+                                    <span style="font-weight:400;font-size:.75rem;color:var(--text-muted)">(from table below)</span>
+                                </label>
+                                <input id="pay-feeId" type="number" min="1" placeholder="e.g. 3">
                                 <span class="field-error" id="pay-feeId-error"></span>
                             </div>
-                            <div class="form-group" style="margin-bottom:1.25rem">
+                            <div class="form-group" style="margin-bottom:1rem">
                                 <label for="pay-amount">Payment Amount (₹) *</label>
                                 <input id="pay-amount" type="number" min="0.01" step="0.01" placeholder="Amount being paid">
                                 <span class="field-error" id="pay-amount-error"></span>
                             </div>
-                            <button class="btn btn-success" style="width:100%;margin-bottom:1.5rem" onclick="payFee()">Record Payment</button>
+                            <button class="btn btn-success" style="width:100%;margin-bottom:1.5rem" onclick="payFee()">
+                                Record Payment
+                            </button>
                         </form>
 
                         <hr style="border-color:var(--border);margin-bottom:1.25rem">
 
-                        <p class="section-title">View Fees by Student</p>
-                        <div class="search-box">
-                            <input id="fee-filter-studentId" type="text" placeholder="Enter Student ID"
-                                   onkeydown="if(event.key==='Enter') loadFeesByStudent()">
-                            <button class="btn btn-primary"  onclick="loadFeesByStudent()">All Fees</button>
-                            <button class="btn btn-warning"  onclick="loadPendingFees()">Pending</button>
+                        <p class="section-title">🔍 View Fees by Student</p>
+                        <div style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+                            <div style="flex:1;min-width:180px">
+                                <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.3rem">Select Student</label>
+                                <select id="fee-filter-studentId" data-type="student" style="width:100%">
+                                    <option value="">— All Students —</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary"  onclick="onStudentFeeSelect()">All Fees</button>
+                            <button class="btn btn-warning"  onclick="onStudentFeePending()">Pending</button>
                         </div>
                     </div>
                 </div>
@@ -96,26 +120,36 @@
             <!-- Summary -->
             <div id="fee-summary" style="display:none;margin-bottom:1rem"></div>
 
-            <!-- Fee Table -->
+            <!-- Fee Table — auto-loaded on page open -->
             <div class="card">
-                <div class="card-header"><span class="card-title">Fee Records</span></div>
+                <div class="card-header">
+                    <span class="card-title">📄 Fee Records</span>
+                    <span id="fee-record-label" style="font-size:.8rem;color:var(--text-muted)">All students</span>
+                </div>
                 <div class="card-body" style="padding:0">
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Fee ID</th><th>Type</th><th>Total Amount</th>
-                                    <th>Paid</th><th>Outstanding</th><th>Status</th>
-                                    <th>Due Date</th><th>Paid Date</th><th>Semester</th>
+                                    <th>Fee ID</th>
+                                    <th>Student</th>
+                                    <th>Type</th>
+                                    <th>Total Amount</th>
+                                    <th>Paid</th>
+                                    <th>Outstanding</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Semester</th>
                                 </tr>
                             </thead>
                             <tbody id="fee-tbody">
-                                <tr><td colspan="9" class="empty-state">Enter a Student ID above to view fees.</td></tr>
+                                <tr><td colspan="9" class="empty-state">Loading fee records…</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+
         </main>
     </div>
 </div>
@@ -124,11 +158,38 @@
 <script th:src="@{/js/auth.js}"></script>
 <script th:src="@{/js/validation.js}"></script>
 <script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/fees.js}"></script>
 <script>
-    requireAuth();
+    // Only ADMIN manages fees globally; STUDENT sees own fees in student-portal
+    if (!requireRole(['ADMIN'])) { /* redirected */ }
+
     renderUserInfo();
+    applyRoleVisibility();
     document.getElementById('nav-fees').classList.add('active');
+
+    (async function init() {
+        await loadDropdowns(['students']);
+        await loadAllFees();
+    })();
+
+    function onStudentFeeSelect() {
+        const sid = document.getElementById('fee-filter-studentId').value;
+        if (!sid) { loadAllFees(); return; }
+        document.getElementById('fee-filter-sid-text').value = sid;
+        loadFeesByStudent();
+    }
+
+    function onStudentFeePending() {
+        const sid = document.getElementById('fee-filter-studentId').value;
+        if (!sid) { showToast('Select a student first.', 'warning'); return; }
+        document.getElementById('fee-filter-sid-text').value = sid;
+        loadPendingFees();
+    }
 </script>
+
+<!-- Hidden input — fees.js val('fee-filter-studentId') reads from this -->
+<input type="hidden" id="fee-filter-sid-text">
+
 </body>
 </html>

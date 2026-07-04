@@ -1,44 +1,82 @@
 /**
- * fees.js — Create fee records, record payments, view fees
+ * fees.js
  *
  * Endpoints:
- *   POST /fees                                  → Create fee record  (FeeCreateRequest)
- *   POST /fees/pay                              → Record payment     (FeePaymentRequest)
- *   GET  /fees/student/{studentId}              → All fees by student
- *   GET  /fees/student/{studentId}/pending      → Pending fees only
+ *   POST /fees                               → Create fee record  (FeeCreateRequest)
+ *   POST /fees/pay                           → Record payment     (FeePaymentRequest)
+ *   GET  /fees/student/{studentId}           → All fees by student
+ *   GET  /fees/student/{studentId}/pending   → Pending fees only
  *
- * FeeCreateRequest:  studentId*, feeType*, amount* (BigDecimal > 0), dueDate (LocalDate), academicYear, semester
- * FeePaymentRequest: feeId* (Long), paymentAmount* (BigDecimal > 0)
- * FeeResponse:       id, studentId, studentName, feeType, amount, paidAmount, outstandingAmount, status, dueDate, paidDate, academicYear, semester
+ * FeeCreateRequest:  studentId*, feeType*, amount*, dueDate, academicYear, semester
+ * FeePaymentRequest: feeId*, paymentAmount*
+ * FeeResponse:       id, studentId, studentName, feeType, amount, paidAmount,
+ *                    outstandingAmount, status, dueDate, paidDate, academicYear, semester
  */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTO-LOAD ALL  — combines fees for every student on page open
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAllFees() {
+    showLoader('Loading all fee records…');
+    const labelEl = document.getElementById('fee-record-label');
+    if (labelEl) labelEl.textContent = 'All students';
+
+    try {
+        const students = getCachedStudents();   // from dropdown.js
+        if (!students.length) {
+            renderFeeTable([]);
+            return;
+        }
+
+        const results = await Promise.allSettled(
+            students.map(s => apiGet('/fees/student/' + encodeURIComponent(s.studentId)))
+        );
+
+        const all = [];
+        results.forEach(r => {
+            if (r.status === 'fulfilled') all.push(...(r.value.data || []));
+        });
+
+        renderFeeTable(all);
+    } catch (err) {
+        handleApiError(err, 'Could not load fees.');
+    } finally {
+        hideLoader();
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CREATE FEE RECORD   POST /fees
 // ─────────────────────────────────────────────────────────────────────────────
 async function createFeeRecord() {
     const payload = {
-        studentId:    val('fee-studentId'),
+        studentId:    val('fee-studentId'),           // from <select data-type="student">
         feeType:      val('fee-type'),
         amount:       parseFloat(val('fee-amount')) || null,
         dueDate:      val('fee-dueDate')      || null,
         academicYear: val('fee-academicYear') || null,
-        semester:     val('fee-semester')     || null
+        semester:     val('fee-semester-text') || null
     };
 
     clearAllErrors('fee-form');
     let hasError = false;
-    if (!payload.studentId)             { showFieldError('fee-studentId', 'Student ID is required.'); hasError = true; }
-    if (!payload.feeType)               { showFieldError('fee-type',      'Fee type is required.');   hasError = true; }
+    if (!payload.studentId) { showFieldError('fee-studentId', 'Please select a student.'); hasError = true; }
+    if (!payload.feeType)   { showFieldError('fee-type',      'Fee type is required.');    hasError = true; }
     const amtCheck = validateAmount(payload.amount, 'Amount');
-    if (!amtCheck.valid)                { showFieldError('fee-amount', amtCheck.message);             hasError = true; }
+    if (!amtCheck.valid)    { showFieldError('fee-amount', amtCheck.message);              hasError = true; }
     if (hasError) return;
 
-    showLoader('Creating fee record...');
+    showLoader('Creating fee record…');
     try {
         await apiPost('/fees', payload);
         showToast('Fee record created!', 'success');
         document.getElementById('fee-form').reset();
-        setVal('fee-filter-studentId', payload.studentId);
+
+        // Auto-show the newly created student's fees
+        document.getElementById('fee-filter-studentId').value  = payload.studentId;
+        document.getElementById('fee-filter-sid-text').value   = payload.studentId;
+        const labelEl = document.getElementById('fee-record-label');
+        if (labelEl) labelEl.textContent = 'Student: ' + payload.studentId;
         loadFeesByStudent();
     } catch (err) {
         handleApiError(err, 'Could not create fee record.');
@@ -49,7 +87,6 @@ async function createFeeRecord() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RECORD PAYMENT   POST /fees/pay
-// body: { feeId: Long, paymentAmount: BigDecimal }
 // ─────────────────────────────────────────────────────────────────────────────
 async function payFee() {
     const feeIdRaw = val('pay-feeId');
@@ -57,23 +94,29 @@ async function payFee() {
 
     clearAllErrors('pay-form');
     let hasError = false;
-    if (!feeIdRaw || isNaN(parseInt(feeIdRaw)))  { showFieldError('pay-feeId',   'Fee ID is required.');           hasError = true; }
+    if (!feeIdRaw || isNaN(parseInt(feeIdRaw))) { showFieldError('pay-feeId',  'Fee ID is required.'); hasError = true; }
     const amtCheck = validateAmount(parseFloat(amtRaw), 'Payment Amount');
-    if (!amtCheck.valid)                         { showFieldError('pay-amount',   amtCheck.message);               hasError = true; }
+    if (!amtCheck.valid) { showFieldError('pay-amount', amtCheck.message); hasError = true; }
     if (hasError) return;
 
     const payload = {
-        feeId:         parseInt(feeIdRaw),        // Long
-        paymentAmount: parseFloat(amtRaw)          // BigDecimal → number is fine as JSON
+        feeId:         parseInt(feeIdRaw),
+        paymentAmount: parseFloat(amtRaw)
     };
 
-    showLoader('Processing payment...');
+    showLoader('Processing payment…');
     try {
         await apiPost('/fees/pay', payload);
         showToast('Payment recorded successfully!', 'success');
         document.getElementById('pay-form').reset();
-        const sid = val('fee-filter-studentId');
-        if (sid) loadFeesByStudent();
+        // Refresh current view
+        const sid = val('fee-filter-sid-text') || document.getElementById('fee-filter-studentId').value;
+        if (sid) {
+            document.getElementById('fee-filter-sid-text').value = sid;
+            loadFeesByStudent();
+        } else {
+            loadAllFees();
+        }
     } catch (err) {
         handleApiError(err, 'Payment failed.');
     } finally {
@@ -83,12 +126,16 @@ async function payFee() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ALL FEES BY STUDENT   GET /fees/student/{studentId}
+// reads from the hidden input #fee-filter-sid-text (set by the select handler)
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadFeesByStudent() {
-    const studentId = val('fee-filter-studentId');
-    if (!studentId) { showToast('Enter a Student ID first.', 'warning'); return; }
+    const studentId = val('fee-filter-sid-text') || val('fee-filter-studentId');
+    if (!studentId) { showToast('Select a student first.', 'warning'); return; }
 
-    showLoader('Loading fees...');
+    const labelEl = document.getElementById('fee-record-label');
+    if (labelEl) labelEl.textContent = 'Student: ' + studentId;
+
+    showLoader('Loading fees…');
     try {
         const res = await apiGet('/fees/student/' + encodeURIComponent(studentId));
         renderFeeTable(res.data || []);
@@ -103,15 +150,18 @@ async function loadFeesByStudent() {
 // PENDING FEES   GET /fees/student/{studentId}/pending
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadPendingFees() {
-    const studentId = val('fee-filter-studentId');
-    if (!studentId) { showToast('Enter a Student ID first.', 'warning'); return; }
+    const studentId = val('fee-filter-sid-text') || val('fee-filter-studentId');
+    if (!studentId) { showToast('Select a student first.', 'warning'); return; }
 
-    showLoader('Loading pending fees...');
+    const labelEl = document.getElementById('fee-record-label');
+    if (labelEl) labelEl.textContent = 'Pending — ' + studentId;
+
+    showLoader('Loading pending fees…');
     try {
         const res = await apiGet('/fees/student/' + encodeURIComponent(studentId) + '/pending');
         renderFeeTable(res.data || []);
         const count = (res.data || []).length;
-        showToast(count + ' pending fee record(s) found.', count > 0 ? 'warning' : 'info');
+        showToast(count + ' pending fee record(s).', count > 0 ? 'warning' : 'info');
     } catch (err) {
         handleApiError(err, 'Could not load pending fees.');
     } finally {
@@ -120,11 +170,11 @@ async function loadPendingFees() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RENDER FEE TABLE + SUMMARY
+// RENDER TABLE + SUMMARY
 // ─────────────────────────────────────────────────────────────────────────────
 function renderFeeTable(fees) {
-    const tbody  = document.getElementById('fee-tbody');
-    const sumEl  = document.getElementById('fee-summary');
+    const tbody = document.getElementById('fee-tbody');
+    const sumEl = document.getElementById('fee-summary');
     if (!tbody) return;
 
     if (!fees.length) {
@@ -141,15 +191,15 @@ function renderFeeTable(fees) {
         totalOutstanding += parseFloat(f.outstandingAmount) || 0;
         return `
         <tr>
-          <td><strong>${f.id}</strong></td>
-          <td>${escHtml(f.feeType)}</td>
-          <td>${formatCurrency(f.amount)}</td>
-          <td>${formatCurrency(f.paidAmount)}</td>
-          <td>${formatCurrency(f.outstandingAmount)}</td>
-          <td>${statusBadge(f.status)}</td>
-          <td>${formatDate(f.dueDate)}</td>
-          <td>${formatDate(f.paidDate)}</td>
-          <td>${escHtml(f.semester || '—')}</td>
+            <td><strong>${f.id}</strong></td>
+            <td>${escHtml(f.studentId || '—')}</td>
+            <td>${escHtml(f.feeType)}</td>
+            <td>${formatCurrency(f.amount)}</td>
+            <td>${formatCurrency(f.paidAmount)}</td>
+            <td>${formatCurrency(f.outstandingAmount)}</td>
+            <td>${statusBadge(f.status)}</td>
+            <td>${formatDate(f.dueDate)}</td>
+            <td>${escHtml(f.semester || '—')}</td>
         </tr>`;
     }).join('');
 

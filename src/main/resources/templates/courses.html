@@ -13,7 +13,7 @@
         <header class="page-header">
             <h1 class="page-title">Courses <span class="badge badge-info" id="course-count"></span></h1>
             <div class="header-right">
-                <button class="btn btn-primary" onclick="openAddCourse()">＋ Create Course</button>
+                <button class="btn btn-primary" data-role="ADMIN" onclick="openAddCourse()">＋ Create Course</button>
             </div>
         </header>
         <main class="page-body">
@@ -118,9 +118,11 @@
 <script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/course.js}"></script>
 <script>
-    requireAuth();
+    if (!requireRole(['ADMIN', 'FACULTY'])) { /* redirected */ }
     renderUserInfo();
-    document.getElementById('nav-courses').classList.add('active');
+    applyRoleVisibility();
+    if (isAdmin())   document.getElementById('nav-courses').classList.add('active');
+    if (isFaculty()) document.getElementById('nav-fac-courses').classList.add('active');
     function clearSearch() { document.getElementById('course-search').value = ''; loadCourses(); }
     loadCourses();
     loadDropdowns(['departments', 'faculty']);

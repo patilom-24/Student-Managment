@@ -1,41 +1,66 @@
-<!--
-    layout-nav.html
-    Shared sidebar fragment — included via Thymeleaf th:replace in each page.
-    Usage:  <div th:replace="~{layout-nav :: sidebar}"></div>
--->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-
 <aside th:fragment="sidebar" class="sidebar">
+
     <div class="sidebar-brand">
         <span class="brand-icon">🎓</span>
         <span>SMS Portal</span>
     </div>
 
     <nav class="sidebar-nav">
-        <div class="nav-section">Main</div>
-        <a th:href="@{/page/home}"       class="nav-link" id="nav-home">
+        <!-- ── ADMIN sidebar ─────────────────────────────── -->
+        <div class="nav-section" data-role="ADMIN">Admin Panel</div>
+
+        <a th:href="@{/page/home}" class="nav-link" id="nav-home" data-role="ADMIN">
             <span class="nav-icon">🏠</span> Dashboard
         </a>
-
-        <div class="nav-section">Academic</div>
-        <a th:href="@{/page/students}"   class="nav-link" id="nav-students">
+        <a th:href="@{/page/students}" class="nav-link" id="nav-students" data-role="ADMIN">
             <span class="nav-icon">👥</span> Students
         </a>
-        <a th:href="@{/page/faculty}"    class="nav-link" id="nav-faculty">
+        <a th:href="@{/page/faculty}" class="nav-link" id="nav-faculty" data-role="ADMIN">
             <span class="nav-icon">👨‍🏫</span> Faculty
         </a>
-        <a th:href="@{/page/courses}"    class="nav-link" id="nav-courses">
+        <a th:href="@{/page/courses}" class="nav-link" id="nav-courses" data-role="ADMIN">
             <span class="nav-icon">📚</span> Courses
         </a>
-
-        <div class="nav-section">Records</div>
-        <a th:href="@{/page/attendance}" class="nav-link" id="nav-attendance">
+        <a th:href="@{/page/attendance}" class="nav-link" id="nav-attendance" data-role="ADMIN">
             <span class="nav-icon">📋</span> Attendance
         </a>
-        <a th:href="@{/page/fees}"       class="nav-link" id="nav-fees">
+        <a th:href="@{/page/fees}" class="nav-link" id="nav-fees" data-role="ADMIN">
             <span class="nav-icon">💰</span> Fees
+        </a>
+
+        <!-- ── FACULTY sidebar ───────────────────────────── -->
+        <div class="nav-section" data-role="FACULTY">Faculty Panel</div>
+
+        <a th:href="@{/page/faculty-portal}" class="nav-link" id="nav-faculty-home" data-role="FACULTY">
+            <span class="nav-icon">🏠</span> My Dashboard
+        </a>
+        <a th:href="@{/page/students}" class="nav-link" id="nav-fac-students" data-role="FACULTY">
+            <span class="nav-icon">👥</span> Students
+        </a>
+        <a th:href="@{/page/courses}" class="nav-link" id="nav-fac-courses" data-role="FACULTY">
+            <span class="nav-icon">📚</span> Courses
+        </a>
+        <a th:href="@{/page/attendance}" class="nav-link" id="nav-fac-attendance" data-role="FACULTY">
+            <span class="nav-icon">📋</span> Attendance
+        </a>
+
+        <!-- ── STUDENT sidebar ───────────────────────────── -->
+        <div class="nav-section" data-role="STUDENT">Student Panel</div>
+
+        <a th:href="@{/page/student-portal}" class="nav-link" id="nav-student-home" data-role="STUDENT">
+            <span class="nav-icon">🏠</span> My Dashboard
+        </a>
+        <a th:href="@{/page/student-portal#courses}" class="nav-link" id="nav-stu-courses" data-role="STUDENT">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a th:href="@{/page/student-portal#attendance}" class="nav-link" id="nav-stu-attendance" data-role="STUDENT">
+            <span class="nav-icon">📋</span> My Attendance
+        </a>
+        <a th:href="@{/page/student-portal#fees}" class="nav-link" id="nav-stu-fees" data-role="STUDENT">
+            <span class="nav-icon">💰</span> My Fees
         </a>
     </nav>
 
@@ -49,7 +74,7 @@
         </div>
         <button class="btn btn-secondary btn-sm" style="width:100%" onclick="logout()">Sign Out</button>
     </div>
-</aside>
 
+</aside>
 </body>
 </html>

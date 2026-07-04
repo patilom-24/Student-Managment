@@ -8,12 +8,11 @@
 </head>
 <body>
 <div class="app-layout">
-
     <div th:replace="~{layout-nav :: sidebar}"></div>
 
     <div class="main-content">
         <header class="page-header">
-            <h1 class="page-title">Dashboard</h1>
+            <h1 class="page-title">Admin Dashboard</h1>
             <div class="header-right">
                 <span style="font-size:.8rem;color:var(--text-muted)" id="current-date"></span>
             </div>
@@ -21,7 +20,7 @@
 
         <main class="page-body">
 
-            <!-- Stat cards -->
+            <!-- Stat Cards -->
             <div class="stat-grid">
                 <div class="stat-card">
                     <div class="stat-icon blue">👥</div>
@@ -44,9 +43,16 @@
                         <div class="stat-value" id="stat-courses">—</div>
                     </div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">💰</div>
+                    <div>
+                        <div class="stat-label">Fee Records</div>
+                        <div class="stat-value" id="stat-fees">—</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Quick links -->
+            <!-- Quick Access -->
             <div class="card" style="margin-bottom:1.5rem">
                 <div class="card-header"><span class="card-title">Quick Access</span></div>
                 <div class="card-body">
@@ -60,16 +66,26 @@
                 </div>
             </div>
 
-            <!-- API info -->
+            <!-- Recent Students -->
             <div class="card">
-                <div class="card-header"><span class="card-title">API Information</span></div>
-                <div class="card-body">
-                    <p style="color:var(--text-muted);font-size:.875rem;margin-bottom:.75rem">
-                        REST API base: <code style="background:var(--primary-light);padding:2px 6px;border-radius:4px">http://localhost:8080/api/v1</code>
-                        &nbsp;|&nbsp; All protected routes require
-                        <code style="background:var(--primary-light);padding:2px 6px;border-radius:4px">Authorization: Bearer &lt;token&gt;</code>
-                    </p>
-                    <a href="/page/docs" class="btn btn-outline btn-sm">View API Docs</a>
+                <div class="card-header">
+                    <span class="card-title">Recently Registered Students</span>
+                    <a href="/page/students" class="btn btn-sm btn-outline">View All</a>
+                </div>
+                <div class="card-body" style="padding:0">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th><th>Name</th><th>Email</th>
+                                    <th>Department</th><th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-students-tbody">
+                                <tr><td colspan="5" class="empty-state">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -81,25 +97,54 @@
 <script th:src="@{/js/auth.js}"></script>
 <script th:src="@{/js/common.js}"></script>
 <script>
-    requireAuth();
+    if (!requireRole(['ADMIN'])) { /* redirected */ }
+
     renderUserInfo();
+    applyRoleVisibility();
     document.getElementById('nav-home').classList.add('active');
     document.getElementById('current-date').textContent =
         new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-    // Load dashboard stats — GET /students, GET /faculty, GET /courses
-    (async function loadStats() {
+    (async function init() {
         try {
             const [s, f, c] = await Promise.all([
                 apiGet('/students'),
                 apiGet('/faculty'),
                 apiGet('/courses')
             ]);
-            document.getElementById('stat-students').textContent = (s.data || []).length;
-            document.getElementById('stat-faculty') .textContent = (f.data || []).length;
-            document.getElementById('stat-courses') .textContent = (c.data || []).length;
+            const students = s.data || [];
+            const faculty  = f.data || [];
+            const courses  = c.data || [];
+
+            document.getElementById('stat-students').textContent = students.length;
+            document.getElementById('stat-faculty') .textContent = faculty.length;
+            document.getElementById('stat-courses') .textContent = courses.length;
+
+            // Load total fee records count
+            let feeCount = 0;
+            const feeResults = await Promise.allSettled(
+                students.slice(0, 20).map(st => apiGet('/fees/student/' + encodeURIComponent(st.studentId)))
+            );
+            feeResults.forEach(r => { if (r.status === 'fulfilled') feeCount += (r.value.data || []).length; });
+            document.getElementById('stat-fees').textContent = feeCount;
+
+            // Show last 5 students in recent table
+            const recent = students.slice(-5).reverse();
+            const tbody  = document.getElementById('recent-students-tbody');
+            if (!recent.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No students yet.</td></tr>';
+            } else {
+                tbody.innerHTML = recent.map(st => `
+                    <tr>
+                        <td>${escHtml(st.studentId)}</td>
+                        <td>${escHtml(st.firstName)} ${escHtml(st.lastName)}</td>
+                        <td>${escHtml(st.email)}</td>
+                        <td>${escHtml(st.departmentName || st.departmentCode || '—')}</td>
+                        <td>${statusBadge(st.status)}</td>
+                    </tr>`).join('');
+            }
         } catch (err) {
-            console.warn('Dashboard stats failed:', err.message);
+            console.warn('Dashboard load failed:', err.message);
         }
     })();
 </script>

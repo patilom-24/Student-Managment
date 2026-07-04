@@ -162,24 +162,24 @@
 <script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/attendance.js}"></script>
 <script>
-    requireAuth();
-    renderUserInfo();
-    document.getElementById('nav-attendance').classList.add('active');
+    if (!requireRole(['ADMIN', 'FACULTY'])) { /* redirected to student-portal */ }
 
-    // Default today's date in mark form
+    renderUserInfo();
+    applyRoleVisibility();
+
+    if (isAdmin())   document.getElementById('nav-attendance').classList.add('active');
+    if (isFaculty()) document.getElementById('nav-fac-attendance').classList.add('active');
+
     document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
 
-    // 1. Load all dropdowns first, then auto-load the table
     (async function init() {
         await loadDropdowns(['students', 'courses']);
-        await loadAllAttendance();   // auto-load on page open
+        await loadAllAttendance();
     })();
 
-    // Filter wrappers that read from the <select> elements
     function filterByStudent() {
         const sid = document.getElementById('att-filter-studentId').value;
         if (!sid) { loadAllAttendance(); return; }
-        // Set the text-based field attendance.js uses and call the loader
         document.getElementById('att-filter-sid-hidden').value = sid;
         loadAttendanceByStudentSelect(sid);
     }

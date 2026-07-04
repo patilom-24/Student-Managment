@@ -74,8 +74,10 @@ function renderCourseTable(courses) {
           <td>${escHtml(c.academicYear || '—')}</td>
           <td>${escHtml(c.instructorName || '—')}</td>
           <td class="action-cell">
-            <button class="btn btn-sm btn-primary" onclick="openEditCourse(${c.id})">✏ Edit</button>
-            <button class="btn btn-sm btn-danger"  onclick="deleteCourse(${c.id}, '${escHtml(c.courseName)}')">🗑 Delete</button>
+            ${(typeof isAdmin === 'function' && isAdmin())
+              ? `<button class="btn btn-sm btn-primary" onclick="openEditCourse(${c.id})">✏ Edit</button>
+                 <button class="btn btn-sm btn-danger"  onclick="deleteCourse(${c.id}, '${escHtml(c.courseName)}')">🗑 Delete</button>`
+              : '—'}
           </td>
         </tr>`).join('');
 }

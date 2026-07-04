@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard — Student Management System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .info-row { display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .info-box { flex:1; min-width:160px; background:var(--surface); border:1px solid var(--border);
+                    border-radius:var(--radius); padding:1rem; text-align:center; }
+        .info-box .val { font-size:1.8rem; font-weight:800; color:var(--primary); }
+        .info-box .lbl { font-size:.75rem; color:var(--text-muted); margin-top:.2rem; }
+    </style>
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{layout-nav :: sidebar}"></div>
+
+    <div class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Faculty Dashboard</h1>
+            <div class="header-right">
+                <span style="font-size:.8rem;color:var(--text-muted)" id="current-date"></span>
+            </div>
+        </header>
+
+        <main class="page-body">
+
+            <!-- Welcome Banner -->
+            <div class="card" style="margin-bottom:1.5rem;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none">
+                <div class="card-body" style="display:flex;align-items:center;gap:1rem">
+                    <div style="font-size:3rem">👨‍🏫</div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:700">Welcome, <span id="fac-welcome-name"></span></div>
+                        <div style="opacity:.85;font-size:.875rem">Faculty Member — Student Management System</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="info-row">
+                <div class="info-box">
+                    <div class="val" id="fac-stat-students">—</div>
+                    <div class="lbl">Total Students</div>
+                </div>
+                <div class="info-box">
+                    <div class="val" id="fac-stat-courses">—</div>
+                    <div class="lbl">Total Courses</div>
+                </div>
+                <div class="info-box">
+                    <div class="val" id="fac-stat-attendance">—</div>
+                    <div class="lbl">Attendance Records Today</div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card" style="margin-bottom:1.5rem">
+                <div class="card-header"><span class="card-title">Quick Actions</span></div>
+                <div class="card-body">
+                    <div class="quick-links">
+                        <a href="/page/attendance" class="quick-card">
+                            <div class="qc-icon">✏</div>
+                            <div class="qc-label">Mark Attendance</div>
+                        </a>
+                        <a href="/page/students" class="quick-card">
+                            <div class="qc-icon">👥</div>
+                            <div class="qc-label">View Students</div>
+                        </a>
+                        <a href="/page/courses" class="quick-card">
+                            <div class="qc-icon">📚</div>
+                            <div class="qc-label">View Courses</div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mark Attendance Quick Form -->
+            <div class="card">
+                <div class="card-header"><span class="card-title">✏ Quick Mark Attendance</span></div>
+                <div class="card-body">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1rem">
+                        <div class="form-group">
+                            <label for="fac-att-student">Student</label>
+                            <select id="fac-att-student" data-type="student">
+                                <option value="">Loading students…</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fac-att-course">Course</label>
+                            <select id="fac-att-course" data-type="courseCode">
+                                <option value="">Loading courses…</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fac-att-date">Date</label>
+                            <input id="fac-att-date" type="date">
+                        </div>
+                        <div class="form-group">
+                            <label for="fac-att-status">Status</label>
+                            <select id="fac-att-status">
+                                <option value="">— Status —</option>
+                                <option value="PRESENT">✅ Present</option>
+                                <option value="ABSENT">❌ Absent</option>
+                                <option value="LATE">⏰ Late</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fac-att-remarks">Remarks</label>
+                            <input id="fac-att-remarks" type="text" placeholder="Optional">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="facMarkAttendance()">Mark Attendance</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
+<script>
+    if (!requireRole(['FACULTY'])) { /* redirected */ }
+
+    renderUserInfo();
+    applyRoleVisibility();
+    document.getElementById('nav-faculty-home').classList.add('active');
+    document.getElementById('current-date').textContent =
+        new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    const user = getCurrentUser();
+    if (user) document.getElementById('fac-welcome-name').textContent = user.username;
+
+    // Default today
+    document.getElementById('fac-att-date').value = new Date().toISOString().split('T')[0];
+
+    (async function init() {
+        await loadDropdowns(['students', 'courses']);
+
+        try {
+            const [s, c] = await Promise.all([apiGet('/students'), apiGet('/courses')]);
+            document.getElementById('fac-stat-students').textContent = (s.data || []).length;
+            document.getElementById('fac-stat-courses') .textContent = (c.data || []).length;
+
+            // Count today's attendance records across first 10 students
+            const today    = new Date().toISOString().split('T')[0];
+            const students = (s.data || []).slice(0, 10);
+            const results  = await Promise.allSettled(
+                students.map(st => apiGet('/attendance/student/' + encodeURIComponent(st.studentId)))
+            );
+            let todayCount = 0;
+            results.forEach(r => {
+                if (r.status === 'fulfilled') {
+                    (r.value.data || []).forEach(a => {
+                        if (a.attendanceDate && String(a.attendanceDate).startsWith(today)) todayCount++;
+                    });
+                }
+            });
+            document.getElementById('fac-stat-attendance').textContent = todayCount;
+        } catch (err) { console.warn(err); }
+    })();
+
+    async function facMarkAttendance() {
+        const payload = {
+            studentId:      document.getElementById('fac-att-student').value,
+            courseCode:     document.getElementById('fac-att-course').value,
+            attendanceDate: document.getElementById('fac-att-date').value || null,
+            status:         document.getElementById('fac-att-status').value,
+            remarks:        document.getElementById('fac-att-remarks').value || null
+        };
+
+        if (!payload.studentId || !payload.courseCode || !payload.attendanceDate || !payload.status) {
+            showToast('Please fill in all required fields.', 'warning');
+            return;
+        }
+
+        showLoader('Marking attendance…');
+        try {
+            await apiPost('/attendance', payload);
+            showToast('Attendance marked successfully!', 'success');
+            document.getElementById('fac-att-student').value = '';
+            document.getElementById('fac-att-status').value  = '';
+            document.getElementById('fac-att-remarks').value = '';
+        } catch (err) {
+            handleApiError(err, 'Could not mark attendance.');
+        } finally {
+            hideLoader();
+        }
+    }
+</script>
+</body>
+</html>

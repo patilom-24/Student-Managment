@@ -1,193 +1,161 @@
 /**
  * dropdown.js — Populate all <select> dropdowns from the live database
  *
- * Called on page load wherever forms exist.
- * Three data sources:
- *   GET /departments  → department dropdowns
- *   GET /courses      → course dropdowns (for student registration)
- *   GET /faculty      → instructor dropdowns (for course form)
+ * data-type="department"  → filled from GET /departments
+ * data-type="course"      → filled from GET /courses  (with auto-fill of semester/academicYear)
+ * data-type="courseCode"  → filled from GET /courses  (code-only, for attendance/fees filters)
+ * data-type="instructor"  → filled from GET /faculty
+ * data-type="student"     → filled from GET /students
  *
  * Usage:
- *   await loadDropdowns(['departments', 'courses', 'faculty']);
+ *   await loadDropdowns(['departments', 'courses', 'faculty', 'students']);
  */
 
-// ── Cache to avoid repeat fetches within same page load ─────────────────────
 const _dropdownCache = {};
 
-// ── Master loader ────────────────────────────────────────────────────────────
+// ── Master loader ─────────────────────────────────────────────────────────────
 async function loadDropdowns(types) {
     const tasks = [];
-    if (types.includes('departments')) tasks.push(_loadDepartments());
-    if (types.includes('courses'))     tasks.push(_loadCourses());
-    if (types.includes('faculty'))     tasks.push(_loadFaculty());
-    if (types.includes('students'))    tasks.push(_loadStudents());
-    await Promise.allSettled(tasks);   // never block the page even if one fails
+    if (types.includes('departments')) tasks.push(_fetchAndFillDepts());
+    if (types.includes('courses'))     tasks.push(_fetchAndFillCourses());
+    if (types.includes('faculty'))     tasks.push(_fetchAndFillFaculty());
+    if (types.includes('students'))    tasks.push(_fetchAndFillStudents());
+    await Promise.allSettled(tasks);
 }
 
-// ── DEPARTMENTS — GET /departments ───────────────────────────────────────────
-async function _loadDepartments() {
+// ── Refresh (clear cache then reload) ────────────────────────────────────────
+async function refreshDropdowns(types) {
+    types.forEach(t => delete _dropdownCache[t]);
+    await loadDropdowns(types);
+}
+
+// ── Cache accessors ───────────────────────────────────────────────────────────
+function getCachedStudents() { return _dropdownCache.students || []; }
+function getCachedCourses()  { return _dropdownCache.courses  || []; }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// DEPARTMENTS  GET /departments
+// ═════════════════════════════════════════════════════════════════════════════
+async function _fetchAndFillDepts() {
     try {
         if (!_dropdownCache.departments) {
             const res = await apiGet('/departments');
             _dropdownCache.departments = res.data || [];
         }
-        _fillDeptSelects(_dropdownCache.departments);
+        _fillByType('department', _dropdownCache.departments,
+            d => ({ value: d.code, label: `${d.name} (${d.code})` })
+        );
     } catch (err) {
-        console.warn('Could not load departments for dropdown:', err.message);
+        console.warn('Departments dropdown failed:', err.message);
     }
 }
 
-function _fillDeptSelects(departments) {
-    // Find every <select> with data-type="department" on the page
-    document.querySelectorAll('select[data-type="department"]').forEach(sel => {
-        const currentVal = sel.value;
-        const placeholder = '<option value="">— Select Department —</option>';
-        const options = departments.map(d =>
-            `<option value="${escHtml(d.code)}">${escHtml(d.name)} (${escHtml(d.code)})</option>`
-        ).join('');
-        sel.innerHTML = placeholder + options;
-        if (currentVal) sel.value = currentVal;   // restore selection if re-populating
-    });
-}
-
-// ── COURSES — GET /courses ───────────────────────────────────────────────────
-async function _loadCourses() {
+// ═════════════════════════════════════════════════════════════════════════════
+// COURSES  GET /courses
+// Fills both data-type="course" and data-type="courseCode"
+// ═════════════════════════════════════════════════════════════════════════════
+async function _fetchAndFillCourses() {
     try {
         if (!_dropdownCache.courses) {
             const res = await apiGet('/courses');
             _dropdownCache.courses = res.data || [];
         }
-        _fillCourseSelects(_dropdownCache.courses);
+        const courses = _dropdownCache.courses;
+
+        // data-type="course" — full select with auto-fill on change
+        document.querySelectorAll('select[data-type="course"]').forEach(sel => {
+            const prev = sel.value;
+            sel.innerHTML = '<option value="">— Select Course —</option>' +
+                courses.map(c =>
+                    `<option value="${escHtml(c.courseCode)}"
+                             data-semester="${escHtml(c.semester || '')}"
+                             data-academic-year="${escHtml(c.academicYear || '')}"
+                             data-dept="${escHtml(c.departmentCode || '')}">
+                        ${escHtml(c.courseCode)} — ${escHtml(c.courseName)}
+                     </option>`
+                ).join('');
+            if (prev) sel.value = prev;
+
+            // Re-attach change listener once (prevent duplicates with a flag)
+            if (!sel._courseListenerAdded) {
+                sel._courseListenerAdded = true;
+                sel.addEventListener('change', function () {
+                    const opt = this.options[this.selectedIndex];
+                    _setIfExists('semester',       opt.dataset.semester);
+                    _setIfExists('academicYear',   opt.dataset.academicYear);
+                    _setIfExists('departmentCode', opt.dataset.dept);
+                });
+            }
+        });
+
+        // data-type="courseCode" — plain code only
+        document.querySelectorAll('select[data-type="courseCode"]').forEach(sel => {
+            const prev = sel.value;
+            // Preserve any "All" placeholder the HTML already has
+            const firstOpt = sel.options[0] && !sel.options[0].value ? sel.options[0].outerHTML : '';
+            sel.innerHTML = (firstOpt || '<option value="">— Select Course —</option>') +
+                courses.map(c =>
+                    `<option value="${escHtml(c.courseCode)}">${escHtml(c.courseCode)} — ${escHtml(c.courseName)}</option>`
+                ).join('');
+            if (prev) sel.value = prev;
+        });
+
     } catch (err) {
-        console.warn('Could not load courses for dropdown:', err.message);
+        console.warn('Courses dropdown failed:', err.message);
     }
 }
 
-function _fillCourseSelects(courses) {
-    document.querySelectorAll('select[data-type="course"]').forEach(sel => {
-        const currentVal = sel.value;
-        const placeholder = '<option value="">— Select Course —</option>';
-        const options = courses.map(c =>
-            `<option value="${escHtml(c.courseCode)}"
-                     data-semester="${escHtml(c.semester || '')}"
-                     data-academic-year="${escHtml(c.academicYear || '')}"
-                     data-dept="${escHtml(c.departmentCode || '')}">
-                ${escHtml(c.courseCode)} — ${escHtml(c.courseName)}
-            </option>`
-        ).join('');
-        sel.innerHTML = placeholder + options;
-        if (currentVal) sel.value = currentVal;
-
-        // Auto-fill semester & academicYear when a course is selected
-        sel.addEventListener('change', function () {
-            const opt = this.options[this.selectedIndex];
-            const semEl  = document.getElementById('semester');
-            const yearEl = document.getElementById('academicYear');
-            const deptEl = document.getElementById('departmentCode');
-            if (semEl  && opt.dataset.semester)      semEl.value  = opt.dataset.semester;
-            if (yearEl && opt.dataset.academicYear)   yearEl.value = opt.dataset.academicYear;
-            if (deptEl && opt.dataset.dept)           deptEl.value = opt.dataset.dept;
-        });
-    });
-}
-
-// ── FACULTY (Instructors) — GET /faculty ─────────────────────────────────────
-async function _loadFaculty() {
+// ═════════════════════════════════════════════════════════════════════════════
+// FACULTY / INSTRUCTORS  GET /faculty
+// ═════════════════════════════════════════════════════════════════════════════
+async function _fetchAndFillFaculty() {
     try {
         if (!_dropdownCache.faculty) {
             const res = await apiGet('/faculty');
             _dropdownCache.faculty = res.data || [];
         }
-        _fillFacultySelects(_dropdownCache.faculty);
+        _fillByType('instructor', _dropdownCache.faculty,
+            f => ({ value: f.employeeId, label: `${f.firstName} ${f.lastName} (${f.employeeId})` }),
+            '— Select Instructor (optional) —'
+        );
     } catch (err) {
-        console.warn('Could not load faculty for dropdown:', err.message);
+        console.warn('Faculty dropdown failed:', err.message);
     }
 }
 
-function _fillFacultySelects(faculty) {
-    document.querySelectorAll('select[data-type="instructor"]').forEach(sel => {
-        const currentVal = sel.value;
-        const placeholder = '<option value="">— Select Instructor (optional) —</option>';
-        const options = faculty.map(f =>
-            `<option value="${escHtml(f.employeeId)}">
-                ${escHtml(f.firstName)} ${escHtml(f.lastName)} (${escHtml(f.employeeId)})
-            </option>`
-        ).join('');
-        sel.innerHTML = placeholder + options;
-        if (currentVal) sel.value = currentVal;
-    });
-}
-
-// ── Re-populate after modal opens (call this whenever you open a modal) ──────
-async function refreshDropdowns(types) {
-    // Clear cache so fresh data is fetched
-    types.forEach(t => delete _dropdownCache[t]);
-    await loadDropdowns(types);
-}
-
-// ── STUDENTS — GET /students ─────────────────────────────────────────────────
-async function _loadStudents() {
+// ═════════════════════════════════════════════════════════════════════════════
+// STUDENTS  GET /students
+// ═════════════════════════════════════════════════════════════════════════════
+async function _fetchAndFillStudents() {
     try {
         if (!_dropdownCache.students) {
             const res = await apiGet('/students');
             _dropdownCache.students = res.data || [];
         }
-        _fillStudentSelects(_dropdownCache.students);
+        _fillByType('student', _dropdownCache.students,
+            s => ({ value: s.studentId, label: `${s.studentId} — ${s.firstName} ${s.lastName}` }),
+            '— Select Student —'
+        );
     } catch (err) {
-        console.warn('Could not load students for dropdown:', err.message);
+        console.warn('Students dropdown failed:', err.message);
     }
 }
 
-function _fillStudentSelects(students) {
-    document.querySelectorAll('select[data-type="student"]').forEach(sel => {
-        const currentVal = sel.value;
-        const placeholder = '<option value="">— Select Student —</option>';
-        const options = students.map(s =>
-            `<option value="${escHtml(s.studentId)}">
-                ${escHtml(s.studentId)} — ${escHtml(s.firstName)} ${escHtml(s.lastName)}
-            </option>`
-        ).join('');
-        sel.innerHTML = placeholder + options;
-        if (currentVal) sel.value = currentVal;
-    });
-    return students;   // return so callers can use the list
-}
-
-// ── Get cached students list (for auto-load logic) ───────────────────────────
-function getCachedStudents() {
-    return _dropdownCache.students || [];
-}
-
-// ── Get cached courses list ──────────────────────────────────────────────────
-function getCachedCourses() {
-    return _dropdownCache.courses || [];
-}
-
-// ── Fill plain course-code-only selects (data-type="courseCode") ─────────────
-// Used in attendance/fees filters where only the code is needed
-function _fillCourseCodeSelects(courses) {
-    document.querySelectorAll('select[data-type="courseCode"]').forEach(sel => {
-        const currentVal = sel.value;
-        const placeholder = '<option value="">— Select Course —</option>';
-        const options = courses.map(c =>
-            `<option value="${escHtml(c.courseCode)}">${escHtml(c.courseCode)} — ${escHtml(c.courseName)}</option>`
-        ).join('');
-        sel.innerHTML = placeholder + options;
-        if (currentVal) sel.value = currentVal;
+// ── Generic fill helper ───────────────────────────────────────────────────────
+function _fillByType(dataType, items, mapFn, placeholder = '— Select —') {
+    document.querySelectorAll(`select[data-type="${dataType}"]`).forEach(sel => {
+        const prev = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` +
+            items.map(item => {
+                const { value, label } = mapFn(item);
+                return `<option value="${escHtml(value)}">${escHtml(label)}</option>`;
+            }).join('');
+        if (prev) sel.value = prev;
     });
 }
 
-// Override _loadCourses to also fill courseCode selects
-const _origLoadCourses = _loadCourses;
-async function _loadCourses() {
-    try {
-        if (!_dropdownCache.courses) {
-            const res = await apiGet('/courses');
-            _dropdownCache.courses = res.data || [];
-        }
-        _fillCourseSelects(_dropdownCache.courses);
-        _fillCourseCodeSelects(_dropdownCache.courses);
-    } catch (err) {
-        console.warn('Could not load courses for dropdown:', err.message);
-    }
+// ── Safe setter ───────────────────────────────────────────────────────────────
+function _setIfExists(id, value) {
+    const el = document.getElementById(id);
+    if (el && value) el.value = value;
 }

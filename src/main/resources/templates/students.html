@@ -15,7 +15,8 @@
         <header class="page-header">
             <h1 class="page-title">Students <span class="badge badge-info" id="student-count"></span></h1>
             <div class="header-right">
-                <button class="btn btn-primary" onclick="openAddStudent()">＋ Register Student</button>
+                <!-- Only ADMIN can register students -->
+                <button class="btn btn-primary" data-role="ADMIN" onclick="openAddStudent()">＋ Register Student</button>
             </div>
         </header>
 
@@ -30,6 +31,10 @@
                             <button class="btn btn-secondary" onclick="clearStudentSearch()">Clear</button>
                         </div>
                     </div>
+                    <!-- FACULTY: read-only notice -->
+                    <span data-role="FACULTY" style="display:none;font-size:.8rem;color:var(--text-muted);padding:.25rem .5rem;background:var(--bg);border-radius:4px">
+                        👁 View Only
+                    </span>
                 </div>
                 <div class="card-body" style="padding:0">
                     <div class="table-wrapper">
@@ -48,8 +53,7 @@
                             </thead>
                             <tbody id="student-tbody">
                                 <tr><td colspan="8" class="empty-state">Loading students…</td></tr>
-                            </tbody>
-                        </table>
+                            </tbody>                        </table>
                     </div>
                 </div>
             </div>
@@ -180,17 +184,25 @@
 <script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/student.js}"></script>
 <script>
-    requireAuth();
+    // STUDENT role cannot access this page — redirect to their portal
+    if (!requireRole(['ADMIN', 'FACULTY'])) { /* redirected */ }
+
     renderUserInfo();
-    document.getElementById('nav-students').classList.add('active');
+    applyRoleVisibility();
+
+    // Active nav link per role
+    if (isAdmin())   document.getElementById('nav-students').classList.add('active');
+    if (isFaculty()) document.getElementById('nav-fac-students').classList.add('active');
 
     function clearStudentSearch() {
         document.getElementById('student-search').value = '';
         loadStudents();
     }
 
+    // Faculty: hide action column from table rows (done via JS after render)
+    const _origRenderStudentTable = typeof renderStudentTable === 'function' ? renderStudentTable : null;
+
     loadStudents();
-    // Pre-load dropdowns so they're ready when the modal opens
     loadDropdowns(['departments', 'courses']);
 </script>
 </body>

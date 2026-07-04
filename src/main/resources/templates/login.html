@@ -77,7 +77,7 @@
         try {
             await doLogin(username, password);
             showToast('Login successful! Redirecting…', 'success');
-            setTimeout(() => window.location.href = '/page/home', 800);
+            setTimeout(() => redirectByRole(), 800);
         } catch (err) {
             showToast(err.message || 'Login failed. Check your credentials.', 'error');
             document.getElementById('password').value = '';

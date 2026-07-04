@@ -145,17 +145,109 @@ input.is-invalid, select.is-invalid { border-color: var(--danger); }
 .form-actions  { display: flex; gap: .75rem; justify-content: flex-end; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 
 /* ── Table ───────────────────────────────────────────────── */
-.table-wrapper { overflow-x: auto; }
-table          { width: 100%; border-collapse: collapse; }
-thead          { background: var(--bg); }
-th             { padding: .65rem 1rem; text-align: left; font-size: .75rem;
-                 font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
-                 color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
-td             { padding: .6rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
-tbody tr:hover { background: #f8fafc; }
-tbody tr:last-child td { border-bottom: none; }
-.action-cell   { white-space: nowrap; display: flex; gap: .4rem; }
-.empty-state   { text-align: center; padding: 2.5rem; color: var(--text-muted); font-size: .9rem; }
+.table-wrapper          { overflow-x: auto; width: 100%; }
+table                   { width: 100%; border-collapse: collapse; table-layout: fixed; }
+thead                   { background: var(--bg); }
+th                      { padding: .6rem .75rem; text-align: left; font-size: .72rem;
+                          font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+                          color: var(--text-muted); border-bottom: 2px solid var(--border);
+                          white-space: nowrap; overflow: hidden; }
+td                      { padding: .55rem .75rem; border-bottom: 1px solid var(--border);
+                          vertical-align: middle; white-space: nowrap;
+                          overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+tbody tr:hover          { background: #f8fafc; }
+tbody tr:last-child td  { border-bottom: none; }
+.action-cell            { white-space: nowrap; display: flex; gap: .35rem; overflow: visible; max-width: none; }
+.empty-state            { text-align: center; padding: 2.5rem; color: var(--text-muted);
+                          font-size: .9rem; white-space: normal; }
+
+/* ── Per-table column widths ─────────────────────────────── */
+
+/* Students table — 8 cols */
+#student-tbody ~ thead th:nth-child(1),
+table:has(#student-tbody) th:nth-child(1) { width: 110px; }   /* Student ID  */
+table:has(#student-tbody) th:nth-child(2) { width: 160px; }   /* Name        */
+table:has(#student-tbody) th:nth-child(3) { width: 180px; }   /* Email       */
+table:has(#student-tbody) th:nth-child(4) { width: 110px; }   /* Phone       */
+table:has(#student-tbody) th:nth-child(5) { width: 120px; }   /* Department  */
+table:has(#student-tbody) th:nth-child(6) { width: 100px; }   /* Enrolled    */
+table:has(#student-tbody) th:nth-child(7) { width:  80px; }   /* Status      */
+table:has(#student-tbody) th:nth-child(8) { width: 120px; }   /* Actions     */
+
+/* Faculty table — 7 cols */
+table:has(#faculty-tbody) th:nth-child(1) { width: 120px; }   /* Employee ID */
+table:has(#faculty-tbody) th:nth-child(2) { width: 160px; }   /* Name        */
+table:has(#faculty-tbody) th:nth-child(3) { width: 180px; }   /* Email       */
+table:has(#faculty-tbody) th:nth-child(4) { width: 110px; }   /* Phone       */
+table:has(#faculty-tbody) th:nth-child(5) { width: 140px; }   /* Specialization */
+table:has(#faculty-tbody) th:nth-child(6) { width: 120px; }   /* Department  */
+table:has(#faculty-tbody) th:nth-child(7) { width: 120px; }   /* Actions     */
+
+/* Courses table — 8 cols */
+table:has(#course-tbody) th:nth-child(1) { width: 110px; }    /* Code        */
+table:has(#course-tbody) th:nth-child(2) { width: 180px; }    /* Name        */
+table:has(#course-tbody) th:nth-child(3) { width: 120px; }    /* Department  */
+table:has(#course-tbody) th:nth-child(4) { width:  70px; }    /* Credits     */
+table:has(#course-tbody) th:nth-child(5) { width:  80px; }    /* Semester    */
+table:has(#course-tbody) th:nth-child(6) { width: 100px; }    /* Acad Year   */
+table:has(#course-tbody) th:nth-child(7) { width: 150px; }    /* Instructor  */
+table:has(#course-tbody) th:nth-child(8) { width: 120px; }    /* Actions     */
+
+/* Attendance table — 7 cols */
+table:has(#attendance-tbody) th:nth-child(1) { width: 100px; } /* Student ID  */
+table:has(#attendance-tbody) th:nth-child(2) { width: 150px; } /* Name        */
+table:has(#attendance-tbody) th:nth-child(3) { width:  90px; } /* Course Code */
+table:has(#attendance-tbody) th:nth-child(4) { width: 160px; } /* Course Name */
+table:has(#attendance-tbody) th:nth-child(5) { width:  95px; } /* Date        */
+table:has(#attendance-tbody) th:nth-child(6) { width:  80px; } /* Status      */
+table:has(#attendance-tbody) th:nth-child(7) { width: 160px; } /* Remarks     */
+
+/* Fees table — 9 cols */
+table:has(#fee-tbody) th:nth-child(1) { width:  65px; }        /* Fee ID      */
+table:has(#fee-tbody) th:nth-child(2) { width: 100px; }        /* Student     */
+table:has(#fee-tbody) th:nth-child(3) { width:  95px; }        /* Type        */
+table:has(#fee-tbody) th:nth-child(4) { width: 110px; }        /* Total       */
+table:has(#fee-tbody) th:nth-child(5) { width:  90px; }        /* Paid        */
+table:has(#fee-tbody) th:nth-child(6) { width: 110px; }        /* Outstanding */
+table:has(#fee-tbody) th:nth-child(7) { width:  85px; }        /* Status      */
+table:has(#fee-tbody) th:nth-child(8) { width:  90px; }        /* Due Date    */
+table:has(#fee-tbody) th:nth-child(9) { width:  80px; }        /* Semester    */
+
+/* Student portal — attendance table (5 cols, no student col) */
+table:has(#stu-att-tbody) th:nth-child(1) { width: 100px; }    /* Course Code */
+table:has(#stu-att-tbody) th:nth-child(2) { width: 200px; }    /* Course Name */
+table:has(#stu-att-tbody) th:nth-child(3) { width:  95px; }    /* Date        */
+table:has(#stu-att-tbody) th:nth-child(4) { width:  80px; }    /* Status      */
+table:has(#stu-att-tbody) th:nth-child(5) { width: 160px; }    /* Remarks     */
+
+/* Student portal — fee table (8 cols, no student col) */
+table:has(#stu-fee-tbody) th:nth-child(1) { width:  65px; }    /* Fee ID      */
+table:has(#stu-fee-tbody) th:nth-child(2) { width: 100px; }    /* Type        */
+table:has(#stu-fee-tbody) th:nth-child(3) { width: 110px; }    /* Amount      */
+table:has(#stu-fee-tbody) th:nth-child(4) { width:  90px; }    /* Paid        */
+table:has(#stu-fee-tbody) th:nth-child(5) { width: 110px; }    /* Outstanding */
+table:has(#stu-fee-tbody) th:nth-child(6) { width:  85px; }    /* Status      */
+table:has(#stu-fee-tbody) th:nth-child(7) { width:  90px; }    /* Due Date    */
+table:has(#stu-fee-tbody) th:nth-child(8) { width:  80px; }    /* Semester    */
+
+/* Student portal — courses table (6 cols) */
+table:has(#stu-course-tbody) th:nth-child(1) { width:  90px; } /* Code        */
+table:has(#stu-course-tbody) th:nth-child(2) { width: 200px; } /* Name        */
+table:has(#stu-course-tbody) th:nth-child(3) { width: 120px; } /* Department  */
+table:has(#stu-course-tbody) th:nth-child(4) { width:  70px; } /* Credits     */
+table:has(#stu-course-tbody) th:nth-child(5) { width:  80px; } /* Semester    */
+table:has(#stu-course-tbody) th:nth-child(6) { width: 160px; } /* Instructor  */
+
+/* Admin home — recent students (5 cols) */
+table:has(#recent-students-tbody) th:nth-child(1) { width: 110px; } /* ID       */
+table:has(#recent-students-tbody) th:nth-child(2) { width: 160px; } /* Name     */
+table:has(#recent-students-tbody) th:nth-child(3) { width: 180px; } /* Email    */
+table:has(#recent-students-tbody) th:nth-child(4) { width: 130px; } /* Dept     */
+table:has(#recent-students-tbody) th:nth-child(5) { width:  90px; } /* Status   */
+
+/* Prevent badge & action cells from clipping */
+td:has(.badge)       { overflow: visible; }
+td:has(.action-cell) { overflow: visible; }
 
 /* ── Badges ──────────────────────────────────────────────── */
 .badge         { padding: .2rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 600; }

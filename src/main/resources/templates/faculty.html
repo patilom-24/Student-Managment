@@ -127,15 +127,14 @@
 <script th:src="@{/js/dropdown.js}"></script>
 <script th:src="@{/js/faculty.js}"></script>
 <script>
-    requireAuth();
+    if (!requireRole(['ADMIN'])) { /* redirected */ }
     renderUserInfo();
+    applyRoleVisibility();
     document.getElementById('nav-faculty').classList.add('active');
-
     function clearSearch() {
         document.getElementById('faculty-search').value = '';
         loadFaculty();
     }
-
     loadFaculty();
     loadDropdowns(['departments']);
 </script>
