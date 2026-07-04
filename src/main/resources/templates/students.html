@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students — Student Management System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-layout">
+
+    <div th:replace="~{layout-nav :: sidebar}"></div>
+
+    <div class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Students <span class="badge badge-info" id="student-count"></span></h1>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openAddStudent()">＋ Register Student</button>
+            </div>
+        </header>
+
+        <main class="page-body">
+            <div class="card">
+                <div class="card-header">
+                    <div class="toolbar" style="margin-bottom:0">
+                        <div class="search-box">
+                            <input id="student-search" type="text" placeholder="Search by name, email, student ID…"
+                                   onkeydown="if(event.key==='Enter') searchStudents()">
+                            <button class="btn btn-primary"   onclick="searchStudents()">Search</button>
+                            <button class="btn btn-secondary" onclick="clearStudentSearch()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Department</th>
+                                    <th>Enrolled On</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="student-tbody">
+                                <tr><td colspan="8" class="empty-state">Loading students…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ══════════════ Student Modal ══════════════ -->
+<div class="modal-overlay" id="student-modal">
+    <div class="modal-box" style="max-width:720px">
+        <div class="modal-header">
+            <span class="modal-title" id="student-modal-title">Register New Student</span>
+            <button class="modal-close" onclick="closeModal('student-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="student-form" onsubmit="return false;">
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label for="studentId">Student ID *</label>
+                        <input id="studentId" type="text" placeholder="e.g. STU2024001">
+                        <span class="field-error" id="studentId-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="firstName">First Name *</label>
+                        <input id="firstName" type="text" placeholder="First name">
+                        <span class="field-error" id="firstName-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">Last Name *</label>
+                        <input id="lastName" type="text" placeholder="Last name">
+                        <span class="field-error" id="lastName-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input id="email" type="email" placeholder="student@example.com">
+                        <span class="field-error" id="email-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone *</label>
+                        <input id="phone" type="tel" placeholder="10-digit phone number">
+                        <span class="field-error" id="phone-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dateOfBirth">Date of Birth *</label>
+                        <input id="dateOfBirth" type="date">
+                        <span class="field-error" id="dateOfBirth-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender">
+                            <option value="">— Select —</option>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Department — loaded from DB -->
+                    <div class="form-group">
+                        <label for="departmentCode">Department *</label>
+                        <select id="departmentCode" data-type="department">
+                            <option value="">Loading departments…</option>
+                        </select>
+                        <span class="field-error" id="departmentCode-error"></span>
+                    </div>
+
+                    <!-- Edit-only: Status -->
+                    <div class="form-group" id="status-group" style="display:none">
+                        <label for="status">Status</label>
+                        <select id="status">
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                            <option value="SUSPENDED">Suspended</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Registration-only fields -->
+                <div id="reg-only-fields" class="form-grid" style="display:grid; margin-top:.75rem; padding-top:.75rem; border-top:1px solid var(--border)">
+
+                    <!-- Course — loaded from DB, auto-fills semester + academic year -->
+                    <div class="form-group">
+                        <label for="courseCode">Course *</label>
+                        <select id="courseCode" data-type="course">
+                            <option value="">Loading courses…</option>
+                        </select>
+                        <span class="field-error" id="courseCode-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="semester">Semester *
+                            <span style="font-weight:400;font-size:.75rem;color:var(--text-muted)">(auto-filled on course select)</span>
+                        </label>
+                        <input id="semester" type="text" placeholder="e.g. SEM1">
+                        <span class="field-error" id="semester-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="academicYear">Academic Year *
+                            <span style="font-weight:400;font-size:.75rem;color:var(--text-muted)">(auto-filled on course select)</span>
+                        </label>
+                        <input id="academicYear" type="text" placeholder="e.g. 2024-25">
+                        <span class="field-error" id="academicYear-error"></span>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('student-modal')">Cancel</button>
+            <button class="btn btn-primary"   onclick="saveStudent()">Save Student</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/validation.js}"></script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
+<script th:src="@{/js/student.js}"></script>
+<script>
+    requireAuth();
+    renderUserInfo();
+    document.getElementById('nav-students').classList.add('active');
+
+    function clearStudentSearch() {
+        document.getElementById('student-search').value = '';
+        loadStudents();
+    }
+
+    loadStudents();
+    // Pre-load dropdowns so they're ready when the modal opens
+    loadDropdowns(['departments', 'courses']);
+</script>
+</body>
+</html>

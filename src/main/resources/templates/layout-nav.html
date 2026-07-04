@@ -1,0 +1,55 @@
+<!--
+    layout-nav.html
+    Shared sidebar fragment — included via Thymeleaf th:replace in each page.
+    Usage:  <div th:replace="~{layout-nav :: sidebar}"></div>
+-->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<aside th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🎓</span>
+        <span>SMS Portal</span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-section">Main</div>
+        <a th:href="@{/page/home}"       class="nav-link" id="nav-home">
+            <span class="nav-icon">🏠</span> Dashboard
+        </a>
+
+        <div class="nav-section">Academic</div>
+        <a th:href="@{/page/students}"   class="nav-link" id="nav-students">
+            <span class="nav-icon">👥</span> Students
+        </a>
+        <a th:href="@{/page/faculty}"    class="nav-link" id="nav-faculty">
+            <span class="nav-icon">👨‍🏫</span> Faculty
+        </a>
+        <a th:href="@{/page/courses}"    class="nav-link" id="nav-courses">
+            <span class="nav-icon">📚</span> Courses
+        </a>
+
+        <div class="nav-section">Records</div>
+        <a th:href="@{/page/attendance}" class="nav-link" id="nav-attendance">
+            <span class="nav-icon">📋</span> Attendance
+        </a>
+        <a th:href="@{/page/fees}"       class="nav-link" id="nav-fees">
+            <span class="nav-icon">💰</span> Fees
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar" id="nav-avatar">A</div>
+            <div>
+                <div class="user-name" id="nav-user-name">User</div>
+                <div class="user-role" id="nav-user-role">ROLE</div>
+            </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="width:100%" onclick="logout()">Sign Out</button>
+    </div>
+</aside>
+
+</body>
+</html>

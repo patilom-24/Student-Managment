@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses — Student Management System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-layout">
+    <div th:replace="~{layout-nav :: sidebar}"></div>
+    <div class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Courses <span class="badge badge-info" id="course-count"></span></h1>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openAddCourse()">＋ Create Course</button>
+            </div>
+        </header>
+        <main class="page-body">
+            <div class="card">
+                <div class="card-header">
+                    <div class="toolbar" style="margin-bottom:0">
+                        <div class="search-box">
+                            <input id="course-search" type="text" placeholder="Search by name, code, department…"
+                                   onkeydown="if(event.key==='Enter') searchCourses()">
+                            <button class="btn btn-primary"   onclick="searchCourses()">Search</button>
+                            <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Course Code</th><th>Course Name</th><th>Department</th>
+                                    <th>Credits</th><th>Semester</th><th>Academic Year</th>
+                                    <th>Instructor</th><th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="course-tbody">
+                                <tr><td colspan="8" class="empty-state">Loading courses…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Course Modal -->
+<div class="modal-overlay" id="course-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="course-modal-title">Create New Course</span>
+            <button class="modal-close" onclick="closeModal('course-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="course-form" onsubmit="return false;">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="courseCode">Course Code *</label>
+                        <input id="courseCode" type="text" placeholder="e.g. CS101">
+                        <span class="field-error" id="courseCode-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="courseName">Course Name *</label>
+                        <input id="courseName" type="text" placeholder="e.g. Data Structures">
+                        <span class="field-error" id="courseName-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="credits">Credits *</label>
+                        <input id="credits" type="number" min="1" max="10" placeholder="e.g. 3">
+                        <span class="field-error" id="credits-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="semester">Semester *</label>
+                        <input id="semester" type="text" placeholder="e.g. SEM1">
+                        <span class="field-error" id="semester-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="academicYear">Academic Year *</label>
+                        <input id="academicYear" type="text" placeholder="e.g. 2024-25">
+                        <span class="field-error" id="academicYear-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="departmentCode">Department *</label>
+                        <select id="departmentCode" data-type="department">
+                            <option value="">Loading departments…</option>
+                        </select>
+                        <span class="field-error" id="departmentCode-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="instructorEmployeeId">Instructor</label>
+                        <select id="instructorEmployeeId" data-type="instructor">
+                            <option value="">Loading faculty…</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="2" placeholder="Brief course description…"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('course-modal')">Cancel</button>
+            <button class="btn btn-primary"   onclick="saveCourse()">Save Course</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/validation.js}"></script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
+<script th:src="@{/js/course.js}"></script>
+<script>
+    requireAuth();
+    renderUserInfo();
+    document.getElementById('nav-courses').classList.add('active');
+    function clearSearch() { document.getElementById('course-search').value = ''; loadCourses(); }
+    loadCourses();
+    loadDropdowns(['departments', 'faculty']);
+</script>
+</body>
+</html>

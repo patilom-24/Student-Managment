@@ -11,16 +11,44 @@ public class PageController {
 
     @GetMapping("/home")
     public String home(Model model) {
-        model.addAttribute("title", "Student Management System");
-        model.addAttribute("apiBaseUrl", "/api/v1");
+        model.addAttribute("title", "Dashboard — Student Management System");
         return "home";
     }
 
     @GetMapping("/login")
     public String loginPage(Model model) {
-        model.addAttribute("title", "Login");
-        model.addAttribute("loginUrl", "/api/v1/auth/login");
+        model.addAttribute("title", "Login — Student Management System");
         return "login";
+    }
+
+    @GetMapping("/students")
+    public String studentsPage(Model model) {
+        model.addAttribute("title", "Students — Student Management System");
+        return "students";
+    }
+
+    @GetMapping("/faculty")
+    public String facultyPage(Model model) {
+        model.addAttribute("title", "Faculty — Student Management System");
+        return "faculty";
+    }
+
+    @GetMapping("/courses")
+    public String coursesPage(Model model) {
+        model.addAttribute("title", "Courses — Student Management System");
+        return "courses";
+    }
+
+    @GetMapping("/attendance")
+    public String attendancePage(Model model) {
+        model.addAttribute("title", "Attendance — Student Management System");
+        return "attendance";
+    }
+
+    @GetMapping("/fees")
+    public String feesPage(Model model) {
+        model.addAttribute("title", "Fees — Student Management System");
+        return "fees";
     }
 
     @GetMapping("/docs")

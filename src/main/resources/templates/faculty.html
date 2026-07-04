@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty — Student Management System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-layout">
+
+    <div th:replace="~{layout-nav :: sidebar}"></div>
+
+    <div class="main-content">
+        <header class="page-header">
+            <h1 class="page-title">Faculty <span class="badge badge-info" id="faculty-count"></span></h1>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="openAddFaculty()">＋ Register Faculty</button>
+            </div>
+        </header>
+
+        <main class="page-body">
+            <div class="card">
+                <div class="card-header">
+                    <div class="toolbar" style="margin-bottom:0">
+                        <div class="search-box">
+                            <input id="faculty-search" type="text" placeholder="Search by name, email, employee ID…"
+                                   onkeydown="if(event.key==='Enter') searchFaculty()">
+                            <button class="btn btn-primary"   onclick="searchFaculty()">Search</button>
+                            <button class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Specialization</th>
+                                    <th>Department</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="faculty-tbody">
+                                <tr><td colspan="7" class="empty-state">Loading faculty…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Faculty Modal -->
+<div class="modal-overlay" id="faculty-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="faculty-modal-title">Register New Faculty</span>
+            <button class="modal-close" onclick="closeModal('faculty-modal')">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="faculty-form" onsubmit="return false;">
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label for="employeeId">Employee ID *</label>
+                        <input id="employeeId" type="text" placeholder="e.g. FAC2024001">
+                        <span class="field-error" id="employeeId-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="firstName">First Name *</label>
+                        <input id="firstName" type="text" placeholder="First name">
+                        <span class="field-error" id="firstName-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">Last Name *</label>
+                        <input id="lastName" type="text" placeholder="Last name">
+                        <span class="field-error" id="lastName-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input id="email" type="email" placeholder="faculty@example.com">
+                        <span class="field-error" id="email-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone *</label>
+                        <input id="phone" type="tel" placeholder="10-digit mobile number">
+                        <span class="field-error" id="phone-error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="specialization">Specialization</label>
+                        <input id="specialization" type="text" placeholder="e.g. Machine Learning">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="departmentCode">Department *</label>
+                        <select id="departmentCode" data-type="department">
+                            <option value="">Loading departments…</option>
+                        </select>
+                        <span class="field-error" id="departmentCode-error"></span>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal('faculty-modal')">Cancel</button>
+            <button class="btn btn-primary"   onclick="saveFaculty()">Save Faculty</button>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/auth.js}"></script>
+<script th:src="@{/js/validation.js}"></script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dropdown.js}"></script>
+<script th:src="@{/js/faculty.js}"></script>
+<script>
+    requireAuth();
+    renderUserInfo();
+    document.getElementById('nav-faculty').classList.add('active');
+
+    function clearSearch() {
+        document.getElementById('faculty-search').value = '';
+        loadFaculty();
+    }
+
+    loadFaculty();
+    loadDropdowns(['departments']);
+</script>
+</body>
+</html>
